@@ -520,8 +520,10 @@ function guardarExamen() {
   const fecha = $("exFecha").value;
   if (!asignatura) { $("exErr").textContent = "Elige la asignatura."; return; }
   if (!fecha) { $("exErr").textContent = "Elige la fecha."; return; }
-  estado.examenes.push({ id: nuevoId(), asignatura: asignatura, tema: $("exTema").value.trim(), fecha: fecha, hora: $("exHora").value });
+  const examen = { id: nuevoId(), asignatura: asignatura, tema: $("exTema").value.trim(), fecha: fecha, hora: $("exHora").value };
+  estado.examenes.push(examen);
   guardar(); cerrarHoja();
+  programarAvisosExamenNube(examen);   // avisos del día antes y del mismo día
   toast("📅 Examen apuntado");
   pintar();
 }
@@ -693,6 +695,9 @@ function mostrarAviso(titulo, texto, etiqueta) {
 // Mira si ha llegado la hora de algún plan. Se ejecuta al abrir, al volver y cada 20 segundos.
 function comprobarPlanes() {
   if (estado.sesionActual) return;
+  if (!$("capa").hidden) return;   // ya hay un aviso en pantalla
+  comprobarExamenes();
+  if (!$("capa").hidden) return;
   const ahora = Date.now();
   for (const p of estado.planes) {
     const hora = fechaHoraPlan(p).getTime();
@@ -787,6 +792,73 @@ function programarTodosNube() {
   for (const p of estado.planes) {
     if (!p.hecho && fechaHoraPlan(p) > ahora) programarAvisoNube(p);
   }
+  for (const e of estado.examenes) programarAvisosExamenNube(e);
+}
+
+// ---------- AVISOS DE EXAMEN ----------
+// Cada examen tiene 2 avisos: el día antes a las 18:00 y el mismo día a las 07:30
+function avisosDeExamen(e) {
+  const nombre = e.asignatura + (e.tema ? " (" + e.tema + ")" : "");
+  return [
+    {
+      clave: "ex-" + e.id + "-antes",
+      cuando: new Date(sumarDias(e.fecha, -1) + "T18:00:00"),
+      texto: "Mañana tienes examen de " + nombre + ". ¿Has repasado? Aún estás a tiempo."
+    },
+    {
+      clave: "ex-" + e.id + "-dia",
+      cuando: new Date(e.fecha + "T07:30:00"),
+      texto: "Hoy es el examen de " + nombre + (e.hora ? " a las " + e.hora : "") + ". ¡Tú puedes!"
+    }
+  ];
+}
+
+// Guarda en Supabase los avisos del examen que aún no han pasado
+async function programarAvisosExamenNube(e) {
+  try {
+    const sub = await suscripcionPush();
+    if (!sub) return;
+    for (const a of avisosDeExamen(e)) {
+      if (a.cuando <= new Date()) continue;   // esa hora ya pasó
+      await llamarSupabase("study_programar_aviso", {
+        p_endpoint: sub.endpoint, p_suscripcion: sub, p_plan: a.clave,
+        p_cuando: a.cuando.toISOString(), p_titulo: "Apix 📅", p_cuerpo: a.texto
+      });
+    }
+  } catch (err) {
+    console.warn("No se pudo programar el aviso del examen:", err);
+  }
+}
+
+function cancelarAvisosExamenNube(id) {
+  cancelarAvisoNube("ex-" + id + "-antes");
+  cancelarAvisoNube("ex-" + id + "-dia");
+}
+
+// Con la app abierta: si ha llegado la hora de un aviso de examen, lo enseña
+function comprobarExamenes() {
+  const ahora = Date.now();
+  estado.avisosVistos = estado.avisosVistos || [];
+  for (const e of estado.examenes) {
+    for (const a of avisosDeExamen(e)) {
+      const hora = a.cuando.getTime();
+      if (ahora >= hora && ahora - hora < 3 * 3600000 && !estado.avisosVistos.includes(a.clave)) {
+        estado.avisosVistos.push(a.clave);
+        guardar();
+        mostrarAviso("Apix 📅", a.texto, a.clave);
+        avisoExamen(e, a.texto);
+        return;
+      }
+    }
+  }
+}
+
+// Pantalla grande de Apix para el examen
+function avisoExamen(e, texto) {
+  mostrarCapa('<div class="msg">' + apixSVG("anima", "xl") + '<p class="label">Apix · Examen</p>' +
+    '<h1>' + esc(e.asignatura) + '</h1><p>' + esc(texto) + '</p>' +
+    '<button class="btn" data-act="plan-de-examen" data-id="' + e.id + '">Planificar estudio</button>' +
+    '<button class="btn-sec full" data-act="cerrar-capa">Vale</button></div>');
 }
 
 function mostrarCapa(html) { $("capa").innerHTML = html; $("capa").hidden = false; }
@@ -854,11 +926,13 @@ const ACCIONES = {
   "borrar-examen": function (b) {
     if (!confirm("¿Borrar este examen?")) return;
     estado.examenes = estado.examenes.filter(function (e) { return e.id !== b.dataset.id; });
+    cancelarAvisosExamenNube(b.dataset.id);
     guardar(); pintar();
   },
   "nuevo-plan": function (b) { hojaPlan(b.dataset.fecha, null); },
   "plan-de-examen": function (b) {
     const ex = estado.examenes.find(function (e) { return e.id === b.dataset.id; });
+    cerrarCapa();
     hojaPlan(hoy(), ex);
   },
   "tiempo-plan": function (b) {
@@ -916,6 +990,12 @@ setInterval(comprobarPlanes, 20000);
 
 // Si se abrió la app tocando un aviso de Apix, enseña la pantalla del plan
 function abrirDesdeAviso(planId) {
+  // Aviso de examen ("ex-ID-antes" o "ex-ID-dia")
+  if (planId.indexOf("ex-") === 0) {
+    const e = estado.examenes.find(function (x) { return planId.indexOf("ex-" + x.id + "-") === 0; });
+    if (e) { vistaAgenda = "examenes"; irA("agenda"); }
+    return;
+  }
   const p = estado.planes.find(function (x) { return x.id === planId; });
   if (p && !p.hecho && !estado.sesionActual) { p.avisado = true; guardar(); avisoPalabra(p); }
 }
