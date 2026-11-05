@@ -155,17 +155,56 @@ function colorAsig(nombre) {
   return COLORES[suma % COLORES.length];
 }
 
-// Lista de asignaturas ya usadas (para sugerirlas al escribir)
-function asignaturasUsadas() {
-  const todas = [];
-  for (const x of estado.examenes.concat(estado.planes, estado.sesiones)) {
-    if (x.asignatura && !todas.includes(x.asignatura)) todas.push(x.asignatura);
+// Asignaturas de la ESO y Bachillerato (salen en el desplegable)
+const ASIGNATURAS = {
+  "ESO": [
+    "Lengua Castellana y Literatura", "Matemáticas", "Inglés", "Geografía e Historia",
+    "Biología y Geología", "Física y Química", "Tecnología y Digitalización", "Educación Física",
+    "Música", "Educación Plástica, Visual y Audiovisual", "Francés", "Latín",
+    "Economía y Emprendimiento", "Filosofía", "Valores Cívicos y Éticos", "Religión"
+  ],
+  "Bachillerato": [
+    "Matemáticas I", "Matemáticas II", "Matemáticas Aplicadas a las CCSS", "Física", "Química",
+    "Biología", "Geología y Ciencias Ambientales", "Dibujo Técnico", "Tecnología e Ingeniería",
+    "Historia de España", "Historia de la Filosofía", "Historia del Mundo Contemporáneo",
+    "Historia del Arte", "Geografía", "Griego", "Economía",
+    "Empresa y Diseño de Modelos de Negocio", "Literatura Universal", "Dibujo Artístico"
+  ]
+};
+
+// Desplegable de asignaturas. Si eliges "Otra…", aparece una caja para escribirla.
+function selectorAsig(id, valor) {
+  const conocidas = ASIGNATURAS["ESO"].concat(ASIGNATURAS["Bachillerato"]);
+  const esOtra = valor && !conocidas.includes(valor);
+  let html = '<select id="' + id + '" data-cambio="asig-otra">';
+  html += '<option value="">Sin asignatura</option>';
+  for (const grupo in ASIGNATURAS) {
+    html += '<optgroup label="' + grupo + '">';
+    for (const a of ASIGNATURAS[grupo]) {
+      html += '<option' + (a === valor ? ' selected' : '') + '>' + a + '</option>';
+    }
+    html += '</optgroup>';
   }
-  return todas;
+  html += '<option value="otra"' + (esOtra ? ' selected' : '') + '>Otra…</option></select>';
+  html += '<input id="' + id + 'Otra" placeholder="Escribe la asignatura" maxlength="40" value="' + (esOtra ? esc(valor) : '') + '"' + (esOtra ? '' : ' hidden') + '>';
+  return html;
 }
-function datalistAsig() {
-  return '<datalist id="asigs">' + asignaturasUsadas().map(function (a) { return '<option value="' + esc(a) + '">'; }).join("") + '</datalist>';
+
+// Lee la asignatura elegida (del desplegable o de la caja "Otra")
+function leerAsig(id) {
+  const elegida = $(id).value;
+  if (elegida === "otra") return $(id + "Otra").value.trim();
+  return elegida;
 }
+
+// Al cambiar el desplegable, enseña u oculta la caja "Otra"
+document.addEventListener("change", function (ev) {
+  if (ev.target.dataset.cambio === "asig-otra") {
+    const caja = $(ev.target.id + "Otra");
+    caja.hidden = ev.target.value !== "otra";
+    if (!caja.hidden) caja.focus();
+  }
+});
 
 // ---------- 4. PANTALLAS ----------
 function pintar() {
@@ -273,8 +312,8 @@ function pintarEstudiar() {
     cabecera("Estudiar", "Sesión de concentración") +
     tarjetaApix("estudia", "Apix", "Dime qué vas a aprender y cuánto tiempo. Yo vigilo que no te escapes al móvil.", "") +
     '<div class="card stack">' +
-      '<label class="f">¿Qué quieres aprender?<input id="objetivo" placeholder="Ej: subredes, comandos de PowerShell..." maxlength="80"></label>' +
-      '<label class="f">Asignatura (opcional)<input id="asignatura" list="asigs" placeholder="Ej: Redes" maxlength="40"></label>' + datalistAsig() +
+      '<label class="f">¿Qué quieres aprender?<input id="objetivo" placeholder="Ej: ecuaciones, gramática..." maxlength="80"></label>' +
+      '<label class="f">Asignatura (opcional)' + selectorAsig("asignatura", "") + '</label>' +
       '<div><p class="label" style="margin-bottom:8px">Tiempo</p><div class="chips">' + chips + '</div></div>' +
       '<p class="err" id="errEstudiar"></p>' +
       '<button class="btn" data-act="empezar">Empezar a estudiar</button>' +
@@ -427,8 +466,8 @@ function cerrarHoja() { $("hoja").hidden = true; $("hoja").innerHTML = ""; }
 
 function hojaExamen(fecha) {
   abrirHoja('<div class="row between"><h2>Nuevo examen</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
-    '<label class="f">Asignatura<input id="exAsig" list="asigs" placeholder="Ej: Sistemas Operativos en Red" maxlength="40"></label>' + datalistAsig() +
-    '<label class="f">Tema o unidad (opcional)<input id="exTema" placeholder="Ej: Unidad 2 · PowerShell" maxlength="60"></label>' +
+    '<label class="f">Asignatura' + selectorAsig("exAsig", "") + '</label>' +
+    '<label class="f">Tema o unidad (opcional)<input id="exTema" placeholder="Ej: Tema 3 · Ecuaciones de segundo grado" maxlength="60"></label>' +
     '<div class="dos"><label class="f">Fecha<input id="exFecha" type="date" value="' + (fecha || sumarDias(hoy(), 7)) + '"></label>' +
     '<label class="f">Hora (opcional)<input id="exHora" type="time"></label></div>' +
     '<p class="err" id="exErr"></p>' +
@@ -449,8 +488,8 @@ function hojaPlan(fecha, examen) {
   if (fecha && fecha !== hoy()) horaSugerida = "18:00";
   abrirHoja('<div class="row between"><h2>¿Cuándo empiezas?</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
     tarjetaApix("anima", "Apix", "Cuando llegue la hora te avisaré. Si lo dices, lo cumples.", "") +
-    '<label class="f">¿Qué vas a estudiar?<input id="plObj" value="' + esc(objetivo) + '" placeholder="Ej: Repasar subredes" maxlength="80"></label>' +
-    '<label class="f">Asignatura (opcional)<input id="plAsig" list="asigs" value="' + esc(asig) + '" maxlength="40"></label>' + datalistAsig() +
+    '<label class="f">¿Qué vas a estudiar?<input id="plObj" value="' + esc(objetivo) + '" placeholder="Ej: repasar ecuaciones, gramática..." maxlength="80"></label>' +
+    '<label class="f">Asignatura (opcional)' + selectorAsig("plAsig", asig) + '</label>' +
     '<div class="dos"><label class="f">Día<input id="plFecha" type="date" value="' + (fecha || hoy()) + '"></label>' +
     '<label class="f">Hora de empezar<input id="plHora" type="time" value="' + horaSugerida + '"></label></div>' +
     '<div><p class="label" style="margin-bottom:8px">Duración</p><div class="chips" id="plTiempos">' + tiempos + '</div></div>' +
@@ -477,9 +516,9 @@ function hojaAjustes() {
 
 // Lee los datos del formulario de examen
 function guardarExamen() {
-  const asignatura = $("exAsig").value.trim();
+  const asignatura = leerAsig("exAsig");
   const fecha = $("exFecha").value;
-  if (!asignatura) { $("exErr").textContent = "Escribe la asignatura."; return; }
+  if (!asignatura) { $("exErr").textContent = "Elige la asignatura."; return; }
   if (!fecha) { $("exErr").textContent = "Elige la fecha."; return; }
   estado.examenes.push({ id: nuevoId(), asignatura: asignatura, tema: $("exTema").value.trim(), fecha: fecha, hora: $("exHora").value });
   guardar(); cerrarHoja();
@@ -493,7 +532,7 @@ function guardarPlan(minutos) {
   const hora = $("plHora").value;
   if (!objetivo) { $("plErr").textContent = "Escribe qué vas a estudiar."; return; }
   if (!fecha || !hora) { $("plErr").textContent = "Elige el día y la hora."; return; }
-  const plan = { id: nuevoId(), objetivo: objetivo, asignatura: $("plAsig").value.trim(), fecha: fecha, hora: hora, min: minutos, hecho: false, avisado: false };
+  const plan = { id: nuevoId(), objetivo: objetivo, asignatura: leerAsig("plAsig"), fecha: fecha, hora: hora, min: minutos, hecho: false, avisado: false };
   if (fechaHoraPlan(plan) < new Date(Date.now() - 60000)) { $("plErr").textContent = "Esa hora ya ha pasado. Elige una futura."; return; }
   estado.planes.push(plan);
   guardar(); cerrarHoja();
@@ -704,7 +743,7 @@ const ACCIONES = {
   "empezar": function () {
     const objetivo = $("objetivo").value.trim();
     if (!objetivo) { $("errEstudiar").textContent = "Primero dime qué quieres aprender 😉"; return; }
-    empezarSesion(objetivo, $("asignatura").value.trim(), minutosElegidos, null);
+    empezarSesion(objetivo, leerAsig("asignatura"), minutosElegidos, null);
   },
   "empezar-plan": function (b) {
     const p = estado.planes.find(function (x) { return x.id === b.dataset.id; });

@@ -71,8 +71,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .icon-btn { width: 38px; height: 38px; border-radius: 11px; background: var(--surface2); display: grid; place-items: center; flex: none; }
 .icon-btn svg { width: 18px; height: 18px; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-input, select { font: inherit; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
-input:focus { border-color: var(--accent); outline: none; }
+input, select { font: inherit; appearance: auto; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
+input:focus, select:focus { border-color: var(--accent); outline: none; }
 label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: .84rem; }
 .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
