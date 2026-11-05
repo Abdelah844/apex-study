@@ -536,6 +536,7 @@ function guardarPlan(minutos) {
   if (fechaHoraPlan(plan) < new Date(Date.now() - 60000)) { $("plErr").textContent = "Esa hora ya ha pasado. Elige una futura."; return; }
   estado.planes.push(plan);
   guardar(); cerrarHoja();
+  programarAvisoNube(plan);   // para que avise aunque la app esté cerrada
   pintar();
   // Si no tiene los avisos activados, se lo pedimos (sin avisos, Apix no puede recordárselo)
   if (permisoAvisos() === "default") {
@@ -635,7 +636,7 @@ function terminarSesion() {
   // El plan queda cumplido: el de esta sesión, o el primero pendiente de hoy
   let plan = estado.planes.find(function (p) { return p.id === s.planId; });
   if (!plan) plan = planesDelDia(hoy()).find(function (p) { return !p.hecho; });
-  if (plan) plan.hecho = true;
+  if (plan) { plan.hecho = true; cancelarAvisoNube(plan.id); }
 
   estado.sesionActual = null;
   estado.mejorRacha = Math.max(estado.mejorRacha, rachaActual());
@@ -678,9 +679,9 @@ function permisoAvisos() {
   return Notification.permission;   // "default", "granted" o "denied"
 }
 
-function mostrarAviso(titulo, texto) {
+function mostrarAviso(titulo, texto, etiqueta) {
   if (permisoAvisos() !== "granted") return false;
-  const op = { body: texto, icon: "iconos/icono-192.png", badge: "iconos/icono-192.png", tag: "apex-study", vibrate: [200, 100, 200] };
+  const op = { body: texto, icon: "iconos/icono-192.png", badge: "iconos/icono-192.png", tag: etiqueta || "apex-study", vibrate: [200, 100, 200] };
   if (navigator.serviceWorker && navigator.serviceWorker.controller) {
     navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(titulo, op); });
   } else {
@@ -699,7 +700,7 @@ function comprobarPlanes() {
     if (!p.hecho && !p.avisado && ahora >= hora && ahora - hora < 2 * 3600000) {
       p.avisado = true;
       guardar();
-      mostrarAviso("Apix 📚", FRASE_PALABRA + " Toca empezar «" + p.objetivo + "» (" + p.min + " min).");
+      mostrarAviso("Apix 📚", FRASE_PALABRA + " Toca empezar «" + p.objetivo + "» (" + p.min + " min).", "plan-" + p.id);
       avisoPalabra(p);
       return;
     }
@@ -713,6 +714,79 @@ function avisoPalabra(p) {
     '<p>Dijiste que ahora empezarías <b>«' + esc(p.objetivo) + '»</b> durante ' + p.min + ' min.</p>' +
     '<button class="btn" data-act="empezar-plan" data-id="' + p.id + '">Empezar ahora</button>' +
     '<button class="btn-sec full" data-act="posponer" data-id="' + p.id + '">Dame 10 minutos</button></div>');
+}
+
+// ---------- AVISOS DESDE LA NUBE (Supabase) ----------
+// Con la app cerrada, el móvil no puede mirar la hora. Por eso guardamos el aviso
+// en Supabase, y Supabase lo envía a la hora exacta (notificación push).
+const SUPABASE_URL = "https://bwgukadlvyhogwtszlhl.supabase.co";
+const SUPABASE_CLAVE = "sb_publishable_-rnOK3rj54mx7h4s0-L_yA_rgrhU6SU";   // clave pública (es normal que esté aquí)
+const VAPID_PUBLICA = "BEN_7_TDiIF6EdGLyNOw0OoKiYQfpkwmm0SsfKDIMaZ28kmgIqpmMYTF2-_S_7Jc9iVyLmO97pk4NA__y7fbMJA";   // clave pública de avisos
+
+// Llama a una función de Supabase (las del archivo supabase/1-tabla-avisos.sql)
+function llamarSupabase(funcion, datos) {
+  return fetch(SUPABASE_URL + "/rest/v1/rpc/" + funcion, {
+    method: "POST",
+    headers: { "apikey": SUPABASE_CLAVE, "Content-Type": "application/json" },
+    body: JSON.stringify(datos)
+  }).then(function (r) {
+    if (!r.ok) throw new Error("Supabase respondió " + r.status);
+  });
+}
+
+// La clave VAPID viene en texto (base64) y el navegador la quiere en bytes
+function claveEnBytes(texto) {
+  const base64 = (texto + "=".repeat((4 - texto.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  const binario = atob(base64);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  return bytes;
+}
+
+// "Dirección" de este móvil para recibir avisos (se crea la primera vez)
+async function suscripcionPush() {
+  if (permisoAvisos() !== "granted" || !("serviceWorker" in navigator) || !("PushManager" in window)) return null;
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveEnBytes(VAPID_PUBLICA) });
+  return sub.toJSON();
+}
+
+// Guarda en Supabase el aviso de un plan
+async function programarAvisoNube(p) {
+  try {
+    const sub = await suscripcionPush();
+    if (!sub) return;
+    await llamarSupabase("study_programar_aviso", {
+      p_endpoint: sub.endpoint,
+      p_suscripcion: sub,
+      p_plan: p.id,
+      p_cuando: fechaHoraPlan(p).toISOString(),
+      p_titulo: "Apix 📚",
+      p_cuerpo: FRASE_PALABRA + " Toca empezar «" + p.objetivo + "» (" + p.min + " min)."
+    });
+  } catch (e) {
+    console.warn("No se pudo programar el aviso en la nube:", e);
+  }
+}
+
+// Quita de Supabase el aviso de un plan (o todos si planId es null)
+async function cancelarAvisoNube(planId) {
+  try {
+    const sub = await suscripcionPush();
+    if (!sub) return;
+    await llamarSupabase("study_cancelar_aviso", { p_endpoint: sub.endpoint, p_plan: planId });
+  } catch (e) {
+    console.warn("No se pudo cancelar el aviso en la nube:", e);
+  }
+}
+
+// Programa en la nube todos los planes futuros que aún no se han cumplido
+function programarTodosNube() {
+  const ahora = new Date();
+  for (const p of estado.planes) {
+    if (!p.hecho && fechaHoraPlan(p) > ahora) programarAvisoNube(p);
+  }
 }
 
 function mostrarCapa(html) { $("capa").innerHTML = html; $("capa").hidden = false; }
@@ -750,6 +824,7 @@ const ACCIONES = {
     if (!p) return;
     p.avisado = true;
     cerrarCapa();
+    cancelarAvisoNube(p.id);   // ya ha empezado: no hace falta avisar
     empezarSesion(p.objetivo, p.asignatura, p.min, p.id);
   },
   "posponer": function (b) {
@@ -759,6 +834,7 @@ const ACCIONES = {
     p.hora = String(nueva.getHours()).padStart(2, "0") + ":" + String(nueva.getMinutes()).padStart(2, "0");
     p.avisado = false;
     guardar(); cerrarCapa(); pintar();
+    programarAvisoNube(p);   // cambia la hora del aviso en la nube
     toast("⏳ Vale, a las " + p.hora + ". Ni un minuto más.");
   },
   "rendirse": function () {
@@ -793,6 +869,7 @@ const ACCIONES = {
   "borrar-plan": function (b) {
     if (!confirm("¿Borrar este plan de estudio?")) return;
     estado.planes = estado.planes.filter(function (p) { return p.id !== b.dataset.id; });
+    cancelarAvisoNube(b.dataset.id);
     guardar(); pintar();
   },
   "mes": function (b) { mesVista = new Date(mesVista.getFullYear(), mesVista.getMonth() + Number(b.dataset.n), 1); pintarCalendario(); },
@@ -803,7 +880,7 @@ const ACCIONES = {
     if (permisoAvisos() === "no") { toast("Este navegador no permite avisos"); return; }
     Notification.requestPermission().then(function (p) {
       cerrarCapa();
-      if (p === "granted") { toast("✓ Avisos activados"); mostrarAviso("Apix 📚", "¡Hola! Así te avisaré cuando toque estudiar."); }
+      if (p === "granted") { toast("✓ Avisos activados"); mostrarAviso("Apix 📚", "¡Hola! Así te avisaré cuando toque estudiar."); programarTodosNube(); }
       else toast("No se han activado los avisos");
       if (!$("hoja").hidden) hojaAjustes();
       pintar();
@@ -812,6 +889,7 @@ const ACCIONES = {
   "probar-aviso": function () { mostrarAviso("Apix 📚", FRASE_PALABRA); },
   "borrar-todo": function () {
     if (!confirm("Se borrarán tus exámenes, planes y sesiones. ¿Seguro?")) return;
+    cancelarAvisoNube(null);
     estado = datosVacios();
     guardar(); cerrarHoja(); irA("inicio");
   }
@@ -835,6 +913,21 @@ if (estado.sesionActual) abrirFoco();
 
 comprobarPlanes();
 setInterval(comprobarPlanes, 20000);
+
+// Si se abrió la app tocando un aviso de Apix, enseña la pantalla del plan
+function abrirDesdeAviso(planId) {
+  const p = estado.planes.find(function (x) { return x.id === planId; });
+  if (p && !p.hecho && !estado.sesionActual) { p.avisado = true; guardar(); avisoPalabra(p); }
+}
+const planDelEnlace = new URLSearchParams(location.search).get("plan");
+if (planDelEnlace) { abrirDesdeAviso(planDelEnlace); history.replaceState(null, "", location.pathname); }
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", function (ev) {
+    if (ev.data && ev.data.plan) abrirDesdeAviso(ev.data.plan);
+  });
+  // Por si cambió la suscripción del móvil, volvemos a guardar los avisos pendientes
+  navigator.serviceWorker.ready.then(programarTodosNube);
+}
 document.addEventListener("visibilitychange", function () {
   if (!document.hidden) { comprobarPlanes(); if (!estado.sesionActual && $("foco").hidden) pintar(); }
 });

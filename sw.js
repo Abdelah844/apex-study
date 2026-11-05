@@ -6,7 +6,7 @@
 // Si cambias algún archivo, sube el número de VERSION.
 // =====================================================
 
-const VERSION = "apex-study-1.2.0";
+const VERSION = "apex-study-1.3.0";
 
 const ARCHIVOS = [
   "./", "./index.html", "./manifest.json", "./app.js", "./mascota.js",
@@ -44,11 +44,31 @@ self.addEventListener("fetch", function (evento) {
   }));
 });
 
-// 4. Al tocar un aviso de Apix, abre la app
+// 4. Llega un aviso desde Supabase (aunque la app esté cerrada): lo enseñamos
+self.addEventListener("push", function (evento) {
+  let datos = {};
+  try { datos = evento.data.json(); } catch (e) { datos = { cuerpo: evento.data ? evento.data.text() : "" }; }
+  evento.waitUntil(self.registration.showNotification(datos.titulo || "Apex Study", {
+    body: datos.cuerpo || "",
+    icon: "iconos/icono-192.png",
+    badge: "iconos/icono-192.png",
+    tag: datos.tag || "apex-study",       // misma etiqueta que el aviso local: así no sale repetido
+    vibrate: [200, 100, 200],
+    data: { plan: datos.plan || null }
+  }));
+});
+
+// 5. Al tocar un aviso de Apix, abre la app (y si es de un plan, enseña su pantalla)
 self.addEventListener("notificationclick", function (evento) {
   evento.notification.close();
+  const plan = evento.notification.data ? evento.notification.data.plan : null;
   evento.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (ventanas) {
-    for (const v of ventanas) if ("focus" in v) return v.focus();
-    return self.clients.openWindow("./index.html");
+    for (const v of ventanas) {
+      if ("focus" in v) {
+        if (plan) v.postMessage({ plan: plan });
+        return v.focus();
+      }
+    }
+    return self.clients.openWindow(plan ? "./index.html?plan=" + plan : "./index.html");
   }));
 });
