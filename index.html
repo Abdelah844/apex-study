@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Apex Study</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#08080C">
+<link rel="icon" href="iconos/icono-192.png">
+<link rel="apple-touch-icon" href="iconos/icono-192.png">
+<style>
+/* Letras guardadas dentro de la app (las mismas que Apex Gym): funcionan sin internet */
+@font-face { font-family: "Manrope"; src: url("manrope.woff") format("woff"); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url("chakra-petch-medium.woff") format("woff"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url("chakra-petch-semibold.woff") format("woff"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url("chakra-petch-bold.woff") format("woff"); font-weight: 700; font-display: swap; }
+
+/* ===== COLORES =====
+   Variables: si cambias un color aquí, cambia en toda la app.
+   Hay modo claro y modo oscuro (sigue el del móvil). */
+:root {
+  --bg: #F4F3F8; --surface: #FFFFFF; --surface2: #ECEAF3; --surface3: #DEDAEA;
+  --fg: #15131C; --muted: #6B6779; --line: #E3E0EC; --edge: rgba(124,92,255,.14);
+  --accent: #6D4BFF; --accent-soft: rgba(109,75,255,.12); --on-accent: #FFFFFF;
+  --exam: #C2255C; --fire: #E5701F; --good: #0B7A52; --warn: #8A5A0C; --danger: #D63B4E;
+  --glow: rgba(109,75,255,0); --on-good: #FFFFFF;
+  --display: "Chakra Petch", "Bahnschrift", "Arial Narrow", sans-serif;
+  --body: "Manrope", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #08080C; --surface: #111018; --surface2: #191722; --surface3: #252232;
+  --fg: #F1EFF7; --muted: #8C879C; --line: #201E2A; --edge: rgba(155,126,255,.12);
+  --accent: #9B7EFF; --accent-soft: rgba(155,126,255,.14); --on-accent: #0E0820;
+  --exam: #FF4D8D; --fire: #FF8A3D; --good: #3CE0A0; --warn: #FFC94D; --danger: #FF5C6E;
+  --glow: rgba(155,126,255,.35); --on-good: #04140C; color-scheme: dark } }
+
+/* ===== BASE ===== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45;
+  background-image: radial-gradient(ellipse 90% 35% at 50% -8%, var(--accent-soft), transparent 70%); background-attachment: fixed; }
+.app { max-width: 560px; margin: 0 auto; padding: 14px max(16px, env(safe-area-inset-left, 0px)) 120px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-transform: uppercase; letter-spacing: .03em; }
+h1 { font-size: 1.8rem; font-weight: 700; line-height: 1.05; }
+h2 { font-size: 1.15rem; font-weight: 700; }
+h3 { font-size: .98rem; font-weight: 600; }
+p { margin: 0; }
+.muted { color: var(--muted); font-size: .87rem; }
+.small { font-size: .8rem; }
+.num { font-variant-numeric: tabular-nums; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.stack.tight { gap: 8px; }
+.row { display: flex; gap: 10px; align-items: center; }
+.between { justify-content: space-between; }
+.grow { flex: 1; min-width: 0; }
+.label { font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
+.card { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; }
+.card.hero { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft), 0 10px 40px -10px var(--glow); }
+.big-num { font-family: var(--display); font-weight: 700; font-size: 1.55rem; line-height: 1.05; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid3 > * { min-width: 0; }
+[hidden] { display: none !important; }
+
+/* ===== BOTONES Y FORMULARIOS ===== */
+button { font: inherit; cursor: pointer; border: 0; color: inherit; background: none; }
+.btn { display: block; text-align: center; text-decoration: none; background: var(--accent); color: var(--on-accent); font-family: var(--display); text-transform: uppercase; letter-spacing: .07em; font-weight: 700; padding: 14px 18px; border-radius: 12px; width: 100%; font-size: .98rem; box-shadow: 0 6px 24px -6px var(--glow); }
+.btn.auto { width: auto; display: inline-block; padding: 10px 14px; font-size: .85rem; }
+.btn-sec { display: inline-block; text-align: center; text-decoration: none; background: var(--surface2); color: var(--fg); font-weight: 700; padding: 10px 14px; border-radius: 11px; font-size: .88rem; }
+.btn-sec.full { width: 100%; display: block; }
+.btn-txt { color: var(--accent); font-weight: 700; padding: 6px 0; }
+.btn-danger { color: var(--danger); }
+.icon-btn { width: 38px; height: 38px; border-radius: 11px; background: var(--surface2); display: grid; place-items: center; flex: none; }
+.icon-btn svg { width: 18px; height: 18px; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, select { font: inherit; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
+input:focus { border-color: var(--accent); outline: none; }
+label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: .84rem; }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { background: var(--surface2); padding: 8px 13px; border-radius: 99px; white-space: nowrap; font-size: .84rem; font-weight: 700; color: var(--muted); }
+.chip.on { background: var(--fg); color: var(--bg); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface2); border-radius: 13px; padding: 4px; gap: 4px; }
+.seg button { padding: 9px 4px; border-radius: 9px; font-weight: 700; font-size: .84rem; color: var(--muted); }
+.seg button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+.err { color: var(--danger); font-size: .85rem; font-weight: 600; }
+
+/* ===== CABECERA ===== */
+.head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+
+/* ===== BARRAS Y SEMANA ===== */
+.bar { height: 7px; border-radius: 99px; background: var(--surface3); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); box-shadow: 0 0 10px var(--glow); }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.week div { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: .7rem; color: var(--muted); font-weight: 700; }
+.week i { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); display: grid; place-items: center; font-style: normal; font-size: .8rem; }
+.week i.on { background: var(--accent); color: var(--on-accent); box-shadow: 0 0 10px var(--glow); }
+.week i.today { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+/* ===== LISTAS (exámenes y planes) ===== */
+.list { display: flex; flex-direction: column; }
+.item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.item > .acciones { flex-basis: 100%; padding-left: 58px; margin-top: 0; }
+.item:last-child { border-bottom: 0; }
+.name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.dia-caja { width: 46px; flex: none; text-align: center; border-radius: 12px; background: var(--surface2); padding: 6px 0; }
+.dia-caja b { display: block; font-family: var(--display); font-size: 1.25rem; line-height: 1; }
+.dia-caja span { font-size: .65rem; text-transform: uppercase; font-weight: 800; color: var(--muted); }
+.dia-caja.exam { background: color-mix(in srgb, var(--exam) 15%, transparent); color: var(--exam); }
+.dia-caja.exam span { color: var(--exam); }
+.pill { font-size: .68rem; font-weight: 800; padding: 3px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.pill.exam { background: color-mix(in srgb, var(--exam) 14%, transparent); color: var(--exam); }
+.pill.ok { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
+.pill.mal { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+.pill.pend { background: var(--accent-soft); color: var(--accent); }
+.punto-asig { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.vacio { text-align: center; padding: 18px 8px; color: var(--muted); font-size: .9rem; }
+
+/* ===== CALENDARIO ===== */
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal .dsem { text-align: center; font-size: .68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; padding-bottom: 4px; }
+.cal button { aspect-ratio: 1; border-radius: 12px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-weight: 700; font-size: .9rem; }
+.cal button.fuera { opacity: .3; }
+.cal button.hoy { outline: 2px solid var(--fg); outline-offset: -2px; }
+.cal button.sel { background: var(--accent); color: var(--on-accent); }
+.cal .puntos { display: flex; gap: 3px; height: 6px; }
+.cal .puntos i { width: 6px; height: 6px; border-radius: 50%; }
+.cal .puntos .e { background: var(--exam); }
+.cal .puntos .p { background: var(--fire); }
+.cal .puntos .s { background: var(--good); }
+.cal button.sel .puntos i { box-shadow: 0 0 0 1.5px var(--surface); }
+.leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); font-weight: 700; }
+.leyenda i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+/* ===== GRÁFICA DE LA SEMANA ===== */
+.grafica { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 140px; }
+.grafica div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; font-size: .7rem; font-weight: 700; color: var(--muted); }
+.grafica i { width: 100%; max-width: 30px; border-radius: 8px 8px 4px 4px; background: var(--accent); min-height: 4px; box-shadow: 0 0 10px var(--glow); }
+.grafica i.cero { background: var(--surface3); box-shadow: none; }
+
+/* ===== APIX ===== */
+.apix-card { display: flex; gap: 10px; align-items: flex-end; }
+.apix { width: 86px; height: 86px; flex: none; }
+.apix.lg { width: 150px; height: 160px; }
+.apix.xl { width: 190px; height: 200px; }
+.bocadillo { position: relative; flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--edge); border-radius: 16px 16px 16px 4px; padding: 10px 12px; margin-bottom: 18px; }
+.bocadillo p:not(.label) { font-size: .92rem; font-weight: 600; }
+.tono-enfadado .bocadillo { border-color: var(--danger); }
+.tono-campeon .bocadillo { border-color: var(--warn); }
+.tono-anima .bocadillo { border-color: var(--fire); }
+.apix-celebra, .apix-campeon { animation: apix-salto 1s ease-in-out infinite; transform-origin: 50% 100%; }
+.apix-enfadado { animation: apix-temblor .5s linear 3; }
+.apix-anima, .apix-estudia { animation: apix-respira 1.8s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes apix-salto { 0%, 100% { transform: translateY(0) scaleY(1); } 30% { transform: scaleY(.92); } 55% { transform: translateY(-10px) scaleY(1.04); } }
+@keyframes apix-temblor { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-3deg); } 75% { transform: translateX(3px) rotate(3deg); } }
+@keyframes apix-respira { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+.apix-fuego { animation: apix-llama .35s ease-in-out infinite alternate; transform-origin: 60px 26px; transform-box: view-box; }
+@keyframes apix-llama { from { transform: scale(1, 1); } to { transform: scale(1.08, .9); } }
+
+/* ===== PANTALLA DE CONCENTRACIÓN (mientras estudias) ===== */
+#foco { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto;
+  background-image: radial-gradient(ellipse 90% 45% at 50% -5%, var(--accent-soft), transparent 70%); }
+#foco .in { max-width: 460px; margin: 0 auto; min-height: 100%; padding: max(20px, env(safe-area-inset-top, 0px)) 20px 30px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+#foco .objetivo { font-family: var(--display); font-size: 1.35rem; font-weight: 700; text-transform: uppercase; }
+#foco .bocadillo { flex: none; margin: 0; border-radius: 16px; width: 100%; }
+.anillo { position: relative; width: 230px; height: 230px; }
+.anillo svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.anillo circle { fill: none; stroke-width: 7; }
+.anillo .fondo { stroke: var(--surface3); }
+.anillo .avance { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.anillo .t { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 3.4rem; }
+
+/* ===== HOJA INFERIOR (formularios) ===== */
+#hoja { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; }
+#hoja .sheet { background: var(--surface); width: 100%; max-width: 560px; max-height: 90%; border-radius: 22px 22px 0 0; overflow-y: auto;
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)); animation: subir .22s ease-out; }
+@keyframes subir { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ===== AVISO DE APIX Y CELEBRACIÓN (pantalla completa) ===== */
+.capa { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 20px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); }
+.capa .msg { text-align: center; max-width: 360px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; animation: entra .5s ease-out; }
+.capa h1 { font-size: 2rem; }
+@keyframes entra { from { transform: translateY(14px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ===== MENSAJE CORTO (toast) ===== */
+#toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 50; background: var(--fg); color: var(--bg); font-weight: 700; padding: 10px 16px; border-radius: 12px; font-size: .9rem; max-width: 90%; text-align: center; }
+
+/* ===== BARRA DE PESTAÑAS ===== */
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+nav.tabs .in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+nav.tabs button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 2px 10px; font-size: .66rem; font-weight: 700; color: var(--muted); }
+nav.tabs button svg { width: 22px; height: 22px; }
+nav.tabs button.on { color: var(--fg); }
+nav.tabs button.on svg { color: var(--accent); filter: drop-shadow(0 0 6px var(--glow)); }
+
+@media (prefers-reduced-motion: reduce) { .apix, .apix-fuego, #hoja .sheet, .capa .msg { animation: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- Aquí app.js pinta la pestaña que toque -->
+<div class="app" id="app"></div>
+
+<!-- Barra de pestañas de abajo -->
+<nav class="tabs" id="tabs"><div class="in">
+  <button data-tab="inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</button>
+  <button data-tab="estudiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Estudiar</button>
+  <button data-tab="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg>Agenda</button>
+  <button data-tab="calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</button>
+  <button data-tab="progreso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Progreso</button>
+</div></nav>
+
+<!-- Pantalla de concentración (se ve mientras estudias) -->
+<div id="foco" hidden></div>
+
+<!-- Hoja inferior para los formularios -->
+<div id="hoja" hidden></div>
+
+<!-- Aviso de Apix / celebración -->
+<div id="capa" class="capa" hidden></div>
+
+<!-- Mensaje corto -->
+<div id="toast" hidden></div>
+
+<script src="mascota.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
