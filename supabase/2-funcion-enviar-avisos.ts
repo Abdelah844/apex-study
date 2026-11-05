@@ -9,11 +9,21 @@
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Conexión a la base de datos con permisos de servidor (estas dos variables las pone Supabase solo)
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+// Clave de servidor: la pone Supabase solo. Los proyectos nuevos la guardan en
+// SUPABASE_SECRET_KEYS (una lista); los antiguos en SUPABASE_SERVICE_ROLE_KEY.
+function claveServidor(): string {
+  const lista = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (lista) {
+    try {
+      const claves = Object.values(JSON.parse(lista)) as string[];
+      if (claves.length) return claves[0];
+    } catch (_e) { /* si no se puede leer, usamos la otra */ }
+  }
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+}
+
+// Conexión a la base de datos con permisos de servidor
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, claveServidor());
 
 // Las claves VAPID demuestran que el aviso lo manda tu app y no otra
 webpush.setVapidDetails(
