@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Apex Study</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#08080C">
@@ -59,6 +59,9 @@ p { margin: 0; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .grid3 > * { min-width: 0; }
 [hidden] { display: none !important; }
+/* Sin zoom: ni con dos dedos ni con doble toque */
+html, body, button, a, label, input, select, [data-act] { touch-action: manipulation; }
+html { -webkit-text-size-adjust: 100%; }
 
 /* ===== BOTONES Y FORMULARIOS ===== */
 button { font: inherit; cursor: pointer; border: 0; color: inherit; background: none; }
@@ -71,7 +74,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .icon-btn { width: 38px; height: 38px; border-radius: 11px; background: var(--surface2); display: grid; place-items: center; flex: none; }
 .icon-btn svg { width: 18px; height: 18px; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-input, select { font: inherit; appearance: auto; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
+input, select { font: inherit; font-size: 16px; appearance: auto; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
 input:focus, select:focus { border-color: var(--accent); outline: none; }
 label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: .84rem; }
 .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
