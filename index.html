@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Apex Study</title>
 <link rel="manifest" href="manifest.json">
+<script>
+  // Pone el tema guardado lo antes posible (para que no se vea un destello blanco)
+  try { const t = localStorage.getItem("apex-study-tema"); if (t === "claro" || t === "oscuro") document.documentElement.dataset.tema = t; } catch (e) {}
+</script>
 <meta name="theme-color" content="#08080C">
 <link rel="icon" href="iconos/icono-192.png">
 <link rel="apple-touch-icon" href="iconos/icono-192.png">
@@ -27,12 +31,21 @@
   --display: "Chakra Petch", "Bahnschrift", "Arial Narrow", sans-serif;
   --body: "Manrope", "Segoe UI", system-ui, sans-serif;
 }
-@media (prefers-color-scheme: dark) { :root {
+/* Modo oscuro:
+   - "Automático": sigue al móvil (si el móvil está oscuro y no has elegido "claro")
+   - "Oscuro": siempre oscuro, aunque el móvil esté en claro */
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) {
   --bg: #08080C; --surface: #111018; --surface2: #191722; --surface3: #252232;
   --fg: #F1EFF7; --muted: #8C879C; --line: #201E2A; --edge: rgba(155,126,255,.12);
   --accent: #9B7EFF; --accent-soft: rgba(155,126,255,.14); --on-accent: #0E0820;
   --exam: #FF4D8D; --fire: #FF8A3D; --good: #3CE0A0; --warn: #FFC94D; --danger: #FF5C6E;
   --glow: rgba(155,126,255,.35); --on-good: #04140C; color-scheme: dark } }
+:root[data-tema="oscuro"] {
+  --bg: #08080C; --surface: #111018; --surface2: #191722; --surface3: #252232;
+  --fg: #F1EFF7; --muted: #8C879C; --line: #201E2A; --edge: rgba(155,126,255,.12);
+  --accent: #9B7EFF; --accent-soft: rgba(155,126,255,.14); --on-accent: #0E0820;
+  --exam: #FF4D8D; --fire: #FF8A3D; --good: #3CE0A0; --warn: #FFC94D; --danger: #FF5C6E;
+  --glow: rgba(155,126,255,.35); --on-good: #04140C; color-scheme: dark }
 
 /* ===== BASE ===== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }

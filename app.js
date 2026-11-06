@@ -497,6 +497,21 @@ function hojaPlan(fecha, examen) {
     '<button class="btn" data-act="guardar-plan" data-min="25" id="plGuardar">Doy mi palabra</button>');
 }
 
+// ---------- MODO CLARO / OSCURO ----------
+// "auto" sigue al móvil; "claro" u "oscuro" lo fuerza. Se guarda aparte de los datos.
+function temaGuardado() {
+  try { return localStorage.getItem("apex-study-tema") || "auto"; } catch (e) { return "auto"; }
+}
+
+function ponerTema(tema) {
+  try { localStorage.setItem("apex-study-tema", tema); } catch (e) { /* no pasa nada */ }
+  if (tema === "auto") delete document.documentElement.dataset.tema;
+  else document.documentElement.dataset.tema = tema;
+  // Color de la barra de arriba del móvil
+  const oscuro = tema === "oscuro" || (tema === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", oscuro ? "#08080C" : "#F4F3F8");
+}
+
 function hojaAjustes() {
   let avisos;
   const permiso = permisoAvisos();
@@ -506,6 +521,13 @@ function hojaAjustes() {
   else avisos = '<button class="btn" data-act="activar-avisos">Activar avisos de Apix</button>';
 
   abrirHoja('<div class="row between"><h2>Ajustes</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+    '<div class="card stack tight"><h3>Apariencia</h3>' +
+      '<div class="seg">' +
+        ['auto', 'claro', 'oscuro'].map(function (t) {
+          const texto = { auto: "Automático", claro: "☀️ Claro", oscuro: "🌙 Oscuro" }[t];
+          return '<button class="' + (temaGuardado() === t ? "on" : "") + '" data-act="tema" data-tema="' + t + '">' + texto + '</button>';
+        }).join("") +
+      '</div><p class="muted small">Automático usa el mismo modo que tu móvil.</p></div>' +
     '<div class="card stack tight"><h3>Avisos</h3><p class="muted small">Apix te avisará cuando llegue la hora de empezar a estudiar.</p>' + avisos + '</div>' +
     '<div class="card stack tight"><h3>Instalar en el móvil</h3>' +
       (appInstalada() ? '<p class="small">✓ Ya estás usando Apex Study como app.</p>' :
@@ -882,6 +904,7 @@ const ACCIONES = {
   "ir": function (b) { irA(b.dataset.tab); },
   "ajustes": function () { hojaAjustes(); },
   "cerrar-hoja": function () { cerrarHoja(); },
+  "tema": function (b) { ponerTema(b.dataset.tema); hojaAjustes(); },
   "cerrar-capa": function () { cerrarCapa(); pintar(); },
 
   // Estudiar
@@ -980,6 +1003,7 @@ document.addEventListener("click", function (ev) {
 });
 
 // ---------- ARRANQUE ----------
+ponerTema(temaGuardado());
 pintar();
 
 // Si cerraste la app en mitad de una sesión, sigue donde estaba
