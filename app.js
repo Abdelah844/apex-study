@@ -19,6 +19,7 @@ function datosVacios() {
     sesiones: [],    // { fecha, hora, min, objetivo, asignatura, distracciones }
     examenes: [],    // { id, asignatura, tema, fecha, hora }
     planes: [],      // { id, objetivo, asignatura, fecha, hora, min, hecho, avisado }
+    horario: [],     // { id, titulo, tipo, asignatura, dia, inicio, fin } (ver horario.js)
     mejorRacha: 0,
     sesionActual: null   // la sesión en marcha (por si cierras la app sin querer)
   };
@@ -291,6 +292,7 @@ function pintarInicio() {
       '<div class="week" style="margin-top:8px">' + semana + '</div>' +
       '<button class="btn" data-act="ir" data-tab="estudiar" style="margin-top:10px">Empezar a estudiar</button>' +
     '</div>' +
+    tarjetaHorarioHoy() +
     '<div class="card"><div class="row between"><h2>Planes de estudio</h2><button class="btn-txt" data-act="nuevo-plan">+ Nuevo</button></div>' +
       '<div class="list">' + (planes.length ? planes.map(function (p) { return filaPlan(p, true); }).join("") :
         '<p class="vacio">¿Cuándo vas a empezar a estudiar? Ponle fecha y hora, y Apix te avisará.</p>') + '</div></div>' +
@@ -337,6 +339,8 @@ function pintarAgenda() {
       '</div></div>' +
       '<button class="btn" data-act="nuevo-examen">+ Añadir examen</button>' +
       (pasados.length ? '<div class="card"><p class="label">Ya pasados</p><div class="list">' + pasados.map(function (e) { return filaExamen(e, false); }).join("") + '</div></div>' : '');
+  } else if (vistaAgenda === "horario") {
+    contenido = vistaHorarioHTML();
   } else {
     const futuros = estado.planes.filter(function (p) { return p.fecha >= hoy(); }).sort(function (a, b) { return (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1; });
     const pasados = estado.planes.filter(function (p) { return p.fecha < hoy(); }).sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; }).slice(0, 10);
@@ -348,10 +352,11 @@ function pintarAgenda() {
   }
 
   $("app").innerHTML = '<div class="stack">' +
-    cabecera("Agenda", "Exámenes y planes") +
+    cabecera("Agenda", "Exámenes, planes y horario") +
     '<div class="seg">' +
       '<button class="' + (vistaAgenda === "examenes" ? "on" : "") + '" data-act="vista-agenda" data-v="examenes">Exámenes</button>' +
-      '<button class="' + (vistaAgenda === "planes" ? "on" : "") + '" data-act="vista-agenda" data-v="planes">Planes de estudio</button>' +
+      '<button class="' + (vistaAgenda === "planes" ? "on" : "") + '" data-act="vista-agenda" data-v="planes">Planes</button>' +
+      '<button class="' + (vistaAgenda === "horario" ? "on" : "") + '" data-act="vista-agenda" data-v="horario">Horario</button>' +
     '</div>' + contenido + '</div>';
 }
 
@@ -991,6 +996,9 @@ const ACCIONES = {
     guardar(); cerrarHoja(); irA("inicio");
   }
 };
+
+// Añadimos los botones del horario semanal (están en horario.js)
+Object.assign(ACCIONES, ACCIONES_HORARIO);
 
 // Un solo "escuchador" para todos los clics de la app
 document.addEventListener("click", function (ev) {
