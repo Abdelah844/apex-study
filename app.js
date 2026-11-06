@@ -20,6 +20,12 @@ function datosVacios() {
     examenes: [],    // { id, asignatura, tema, fecha, hora }
     planes: [],      // { id, objetivo, asignatura, fecha, hora, min, hecho, avisado }
     horario: [],     // { id, titulo, tipo, asignatura, dia, inicio, fin } (ver horario.js)
+    deberes: [],     // { id, titulo, asignatura, fecha, hecho } (ver deberes.js)
+    notas: [],       // { id, asignatura, nombre, nota, peso, examenId } (ver notas.js)
+    objetivoNota: 5,
+    avisosVistos: [],    // avisos que ya se enseñaron con la app abierta
+    descanso: null,      // el descanso Pomodoro en marcha
+    syncHorario: 0,
     mejorRacha: 0,
     sesionActual: null   // la sesión en marcha (por si cierras la app sin querer)
   };
@@ -42,7 +48,7 @@ let estado = cargar();
 
 // Variables de la interfaz (no se guardan)
 let tab = "inicio";             // pestaña abierta
-let vistaAgenda = "examenes";   // "examenes" o "planes"
+let vistaAgenda = "examenes";   // "examenes", "deberes", "planes" u "horario"
 let mesVista = primerDiaMes(new Date());
 let diaSel = null;              // día pulsado en el calendario
 let minutosElegidos = 25;
@@ -237,12 +243,23 @@ function tarjetaApix(humor, titulo, mensaje, botones) {
 // Una fila de examen
 function filaExamen(e, conBotones) {
   const d = new Date(e.fecha + "T12:00:00");
+  const pasado = e.fecha < hoy();
+  const nota = notaDeExamen(e.id);
+
+  // Etiqueta: cuenta atrás, o la nota si ya pasó
+  let pill = '<span class="pill exam">' + cuentaAtras(e.fecha) + '</span>';
+  if (pasado) pill = nota ? '<span class="pill" style="color:' + colorNota(nota.nota) + '">Nota ' + formatoNota(nota.nota) + '</span>' : '<span class="pill pend">Pasado</span>';
+
+  let botones = "";
+  if (pasado && !nota) botones += '<button class="btn auto" data-act="nota-de-examen" data-id="' + e.id + '">Poner nota</button>';
+  if (conBotones && !pasado) botones += '<button class="btn-sec" data-act="plan-de-examen" data-id="' + e.id + '">Planificar estudio</button>';
+  if (conBotones) botones += '<button class="btn-sec btn-danger" data-act="borrar-examen" data-id="' + e.id + '">Borrar</button>';
+
   return '<div class="item"><div class="dia-caja exam"><b>' + d.getDate() + '</b><span>' + d.toLocaleDateString("es-ES", { month: "short" }) + '</span></div>' +
     '<div class="grow"><span class="name"><span class="punto-asig" style="background:' + colorAsig(e.asignatura) + '"></span> ' + esc(e.asignatura) + '</span>' +
     '<p class="muted small">' + esc(e.tema || "Examen") + (e.hora ? ' · ' + e.hora : '') + '</p>' +
-    '</div><span class="pill exam">' + cuentaAtras(e.fecha) + '</span>' +
-    (conBotones ? '<div class="acciones"><button class="btn-sec" data-act="plan-de-examen" data-id="' + e.id + '">Planificar estudio</button>' +
-      '<button class="btn-sec btn-danger" data-act="borrar-examen" data-id="' + e.id + '">Borrar</button></div>' : '') + '</div>';
+    '</div>' + pill +
+    (botones ? '<div class="acciones">' + botones + '</div>' : '') + '</div>';
 }
 
 // Una fila de plan de estudio
@@ -266,6 +283,7 @@ function pintarInicio() {
   const apix = estadoMascota();
   let botonApix = "";
   if (apix.plan) botonApix = '<button class="btn auto" data-act="empezar-plan" data-id="' + apix.plan + '">Empezar ahora</button>';
+  if (apix.boton) botonApix = apix.boton;
 
   // Semana actual (de lunes a domingo)
   const lunes = sumarDias(hoy(), -((new Date().getDay() + 6) % 7));
@@ -293,6 +311,7 @@ function pintarInicio() {
       '<button class="btn" data-act="ir" data-tab="estudiar" style="margin-top:10px">Empezar a estudiar</button>' +
     '</div>' +
     tarjetaHorarioHoy() +
+    tarjetaDeberesInicio() +
     '<div class="card"><div class="row between"><h2>Planes de estudio</h2><button class="btn-txt" data-act="nuevo-plan">+ Nuevo</button></div>' +
       '<div class="list">' + (planes.length ? planes.map(function (p) { return filaPlan(p, true); }).join("") :
         '<p class="vacio">¿Cuándo vas a empezar a estudiar? Ponle fecha y hora, y Apix te avisará.</p>') + '</div></div>' +
@@ -339,6 +358,8 @@ function pintarAgenda() {
       '</div></div>' +
       '<button class="btn" data-act="nuevo-examen">+ Añadir examen</button>' +
       (pasados.length ? '<div class="card"><p class="label">Ya pasados</p><div class="list">' + pasados.map(function (e) { return filaExamen(e, false); }).join("") + '</div></div>' : '');
+  } else if (vistaAgenda === "deberes") {
+    contenido = vistaDeberesHTML();
   } else if (vistaAgenda === "horario") {
     contenido = vistaHorarioHTML();
   } else {
@@ -352,9 +373,10 @@ function pintarAgenda() {
   }
 
   $("app").innerHTML = '<div class="stack">' +
-    cabecera("Agenda", "Exámenes, planes y horario") +
+    cabecera("Agenda", "Organiza tu semana") +
     '<div class="seg">' +
       '<button class="' + (vistaAgenda === "examenes" ? "on" : "") + '" data-act="vista-agenda" data-v="examenes">Exámenes</button>' +
+      '<button class="' + (vistaAgenda === "deberes" ? "on" : "") + '" data-act="vista-agenda" data-v="deberes">Deberes</button>' +
       '<button class="' + (vistaAgenda === "planes" ? "on" : "") + '" data-act="vista-agenda" data-v="planes">Planes</button>' +
       '<button class="' + (vistaAgenda === "horario" ? "on" : "") + '" data-act="vista-agenda" data-v="horario">Horario</button>' +
     '</div>' + contenido + '</div>';
@@ -381,6 +403,7 @@ function pintarCalendario() {
     let puntos = "";
     if (estado.examenes.some(function (e) { return e.fecha === dia; })) puntos += '<i class="e"></i>';
     if (estado.planes.some(function (p) { return p.fecha === dia; })) puntos += '<i class="p"></i>';
+    if (estado.deberes.some(function (x) { return x.fecha === dia && !x.hecho; })) puntos += '<i class="d"></i>';
     if (minutosDelDia(dia) > 0) puntos += '<i class="s"></i>';
     celdas += '<button class="' + clases + '" data-act="dia" data-dia="' + dia + '">' + d.getDate() + '<span class="puntos">' + puntos + '</span></button>';
     dia = sumarDias(dia, 1);
@@ -394,13 +417,17 @@ function pintarCalendario() {
     const ex = estado.examenes.filter(function (e) { return e.fecha === diaSel; });
     const pl = planesDelDia(diaSel);
     const min = minutosDelDia(diaSel);
-    let lista = ex.map(function (e) { return filaExamen(e, true); }).join("") + pl.map(function (p) { return filaPlan(p, true); }).join("");
+    const de = estado.deberes.filter(function (x) { return x.fecha === diaSel; });
+    let lista = ex.map(function (e) { return filaExamen(e, true); }).join("") +
+      de.map(function (x) { return filaDeber(x, true); }).join("") +
+      pl.map(function (p) { return filaPlan(p, true); }).join("");
     if (!lista) lista = '<p class="vacio">Nada apuntado este día.</p>';
     detalle = '<div class="card stack tight"><h2>' + fechaLarga(diaSel) + '</h2>' +
       (min ? '<p class="muted">✓ Estudiaste ' + min + ' min</p>' : '') +
       '<div class="list">' + lista + '</div>' +
-      '<div class="dos"><button class="btn-sec" data-act="nuevo-examen" data-fecha="' + diaSel + '">+ Examen</button>' +
-      '<button class="btn-sec" data-act="nuevo-plan" data-fecha="' + diaSel + '">+ Plan de estudio</button></div></div>';
+      '<div class="tres"><button class="btn-sec" data-act="nuevo-examen" data-fecha="' + diaSel + '">+ Examen</button>' +
+      '<button class="btn-sec" data-act="nuevo-deber" data-fecha="' + diaSel + '">+ Deberes</button>' +
+      '<button class="btn-sec" data-act="nuevo-plan" data-fecha="' + diaSel + '">+ Plan</button></div></div>';
   }
 
   $("app").innerHTML = '<div class="stack">' +
@@ -409,12 +436,19 @@ function pintarCalendario() {
       '<div class="row between"><button class="icon-btn" data-act="mes" data-n="-1" aria-label="Mes anterior">‹</button>' +
       '<h2>' + titulo + '</h2><button class="icon-btn" data-act="mes" data-n="1" aria-label="Mes siguiente">›</button></div>' +
       '<div class="cal">' + celdas + '</div>' +
-      '<div class="leyenda"><span><i style="background:var(--exam)"></i>Examen</span><span><i style="background:var(--fire)"></i>Plan de estudio</span><span><i style="background:var(--good)"></i>Estudiaste</span></div>' +
+      '<div class="leyenda"><span><i style="background:var(--exam)"></i>Examen</span><span><i style="background:var(--warn)"></i>Entrega</span><span><i style="background:var(--fire)"></i>Plan de estudio</span><span><i style="background:var(--good)"></i>Estudiaste</span></div>' +
     '</div>' + detalle + '</div>';
 }
 
 // ===== Pestaña PROGRESO =====
 function pintarProgreso() {
+  const seg = '<div class="seg">' +
+    '<button class="' + (vistaProgreso === "estudio" ? "on" : "") + '" data-act="vista-progreso" data-v="estudio">Estudio</button>' +
+    '<button class="' + (vistaProgreso === "notas" ? "on" : "") + '" data-act="vista-progreso" data-v="notas">Mis notas</button></div>';
+  if (vistaProgreso === "notas") {
+    $("app").innerHTML = '<div class="stack">' + cabecera("Progreso", "Tus notas") + seg + vistaNotasHTML() + '</div>';
+    return;
+  }
   // Minutos de los últimos 7 días
   const dias = [];
   for (let i = 6; i >= 0; i--) dias.push(sumarDias(hoy(), -i));
@@ -446,7 +480,7 @@ function pintarProgreso() {
   const ultimas = estado.sesiones.slice(-8).reverse();
 
   $("app").innerHTML = '<div class="stack">' +
-    cabecera("Progreso", "Tu constancia") +
+    cabecera("Progreso", "Tu constancia") + seg +
     '<div class="grid3">' +
       '<div class="card"><p class="label">Racha</p><p class="big-num num">' + rachaActual() + '</p><p class="muted small">mejor: ' + estado.mejorRacha + '</p></div>' +
       '<div class="card"><p class="label">Total</p><p class="big-num num">' + (total / 60).toFixed(1).replace(".", ",") + '</p><p class="muted small">horas</p></div>' +
@@ -620,6 +654,7 @@ function abrirFoco() {
 }
 
 let focoHumor = "";
+let rondasSeguidas = 0;   // sesiones seguidas (cada 4, el descanso es largo)
 function ponerApixFoco(humor, frase) {
   if (humor !== focoHumor) { $("focoApix").innerHTML = apixSVG(humor, "lg"); focoHumor = humor; }
   if ($("focoFrase").textContent !== frase) $("focoFrase").textContent = frase;
@@ -668,6 +703,7 @@ function terminarSesion() {
   if (plan) { plan.hecho = true; cancelarAvisoNube(plan.id); }
 
   estado.sesionActual = null;
+  rondasSeguidas++;
   estado.mejorRacha = Math.max(estado.mejorRacha, rachaActual());
   guardar();
   cerrarFoco();
@@ -678,7 +714,72 @@ function terminarSesion() {
   mostrarCapa('<div class="msg">' + apixSVG("campeon", "xl") + '<p class="label">Sesión completada</p><h1>¡Objetivo cumplido!</h1>' +
     '<p><b>' + s.min + ' min</b> de «' + esc(s.objetivo) + '»</p><p class="muted">' + extra + '</p>' +
     '<p class="big-num">🔥 ' + rachaActual() + ' ' + (rachaActual() === 1 ? "día" : "días") + '</p>' +
-    '<button class="btn" data-act="cerrar-capa">¡Genial!</button></div>');
+    botonesDescanso(s) + '</div>');
+}
+
+// =====================================================
+// DESCANSOS POMODORO
+// Después de cada sesión, 5 minutos de descanso. Cada 4 sesiones, 15.
+// Al acabar el descanso, Apix te llama para seguir (aunque la app esté cerrada).
+// =====================================================
+function minutosDescanso() { return rondasSeguidas % 4 === 0 ? 15 : 5; }
+
+function botonesDescanso(s) {
+  const min = minutosDescanso();
+  return '<button class="btn" data-act="empezar-descanso" data-min="' + min + '" data-objetivo="' + esc(s.objetivo) + '" data-asig="' + esc(s.asignatura || "") + '" data-estudio="' + s.min + '">☕ Descanso de ' + min + ' min</button>' +
+    (min === 15 ? '<p class="muted small">Llevas 4 sesiones seguidas: te toca un descanso largo 💜</p>' : '') +
+    '<button class="btn-sec full" data-act="terminar-por-hoy">Terminar por hoy</button>';
+}
+
+function empezarDescanso(min, objetivo, asignatura, minEstudio) {
+  estado.descanso = { fin: Date.now() + min * 60000, min: min, objetivo: objetivo, asignatura: asignatura, minEstudio: minEstudio };
+  guardar();
+  cerrarCapa();
+  // Aviso desde la nube por si cierras la app durante el descanso
+  avisoNube("descanso", new Date(estado.descanso.fin), "Apix ☕", "¡Se acabó el descanso! Vuelve a «" + objetivo + "».");
+  abrirDescanso();
+}
+
+function abrirDescanso() {
+  $("tabs").hidden = true;
+  $("foco").hidden = false;
+  $("foco").innerHTML = '<div class="in">' +
+    '<p class="label">Descanso</p><p class="objetivo">☕ ' + estado.descanso.min + ' minutos</p>' +
+    '<div id="focoApix"></div>' +
+    '<div class="bocadillo"><p id="focoFrase"></p></div>' +
+    '<div class="anillo descanso"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="fondo"/><circle cx="50" cy="50" r="44" class="avance" id="focoAnillo" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><span class="t num" id="focoReloj">--:--</span></div>' +
+    '<button class="btn-sec" data-act="saltar-descanso">Saltar descanso</button></div>';
+  focoHumor = "";
+  ponerApixFoco("descanso", "Respira, bebe agua y estira las piernas. Nada de redes, que luego cuesta volver 😉");
+  actualizarDescanso();
+  clearInterval(relojFoco);
+  relojFoco = setInterval(actualizarDescanso, 1000);
+}
+
+function actualizarDescanso() {
+  const d = estado.descanso;
+  if (!d) return;
+  const total = d.min * 60;
+  const restantes = Math.max(0, Math.round((d.fin - Date.now()) / 1000));
+  if (restantes <= 0) { terminarDescanso(true); return; }
+  $("focoReloj").textContent = String(Math.floor(restantes / 60)).padStart(2, "0") + ":" + String(restantes % 60).padStart(2, "0");
+  $("focoAnillo").setAttribute("stroke-dashoffset", (276.5 * (total - restantes) / total).toFixed(1));
+  if (restantes <= 30) ponerApixFoco("anima", "¡Últimos segundos! Prepárate para volver.");
+}
+
+// porTiempo = true si el descanso acabó solo; false si lo has saltado
+function terminarDescanso(porTiempo) {
+  clearInterval(relojFoco);
+  const d = estado.descanso;
+  estado.descanso = null;
+  guardar();
+  if (!porTiempo) cancelarAvisoNube("descanso");
+  else mostrarAviso("Apix ☕", "¡Se acabó el descanso! Vuelve a «" + d.objetivo + "».", "descanso");
+  cerrarFoco();
+  mostrarCapa('<div class="msg">' + apixSVG("anima", "xl") + '<p class="label">Apix</p><h1>¡Vuelta al estudio!</h1>' +
+    '<p>¿Otra sesión de «' + esc(d.objetivo) + '»?</p>' +
+    '<button class="btn" data-act="otra-sesion" data-objetivo="' + esc(d.objetivo) + '" data-asig="' + esc(d.asignatura || "") + '" data-min="' + d.minEstudio + '">Otra sesión de ' + d.minEstudio + ' min</button>' +
+    '<button class="btn-sec full" data-act="terminar-por-hoy">Terminar por hoy</button></div>');
 }
 
 function cerrarFoco() {
@@ -721,10 +822,12 @@ function mostrarAviso(titulo, texto, etiqueta) {
 
 // Mira si ha llegado la hora de algún plan. Se ejecuta al abrir, al volver y cada 20 segundos.
 function comprobarPlanes() {
-  if (estado.sesionActual) return;
+  if (estado.sesionActual || estado.descanso) return;
   if (!$("capa").hidden) return;   // ya hay un aviso en pantalla
   comprobarExamenes();
   if (!$("capa").hidden) return;
+  if (comprobarDeberes()) return;
+  if (comprobarHorario()) return;
   const ahora = Date.now();
   for (const p of estado.planes) {
     const hora = fechaHoraPlan(p).getTime();
@@ -784,6 +887,34 @@ async function suscripcionPush() {
   return sub.toJSON();
 }
 
+// Guarda en Supabase un aviso cualquiera: clave única, cuándo, título y texto
+async function avisoNube(clave, cuando, titulo, cuerpo) {
+  if (cuando <= new Date()) return;   // esa hora ya pasó
+  try {
+    const sub = await suscripcionPush();
+    if (!sub) return;
+    await llamarSupabase("study_programar_aviso", {
+      p_endpoint: sub.endpoint, p_suscripcion: sub, p_plan: clave,
+      p_cuando: cuando.toISOString(), p_titulo: titulo, p_cuerpo: cuerpo
+    });
+  } catch (e) {
+    console.warn("No se pudo programar el aviso en la nube:", e);
+  }
+}
+
+// ¿Ha llegado la hora de este aviso y aún no lo hemos enseñado? (con la app abierta)
+function yaToca(clave, cuando) {
+  const ahora = Date.now();
+  const hora = cuando.getTime();
+  estado.avisosVistos = estado.avisosVistos || [];
+  if (ahora < hora || ahora - hora > 2 * 3600000) return false;
+  if (estado.avisosVistos.includes(clave)) return false;
+  estado.avisosVistos.push(clave);
+  estado.avisosVistos = estado.avisosVistos.slice(-300);   // guardamos solo los últimos
+  guardar();
+  return true;
+}
+
 // Guarda en Supabase el aviso de un plan
 async function programarAvisoNube(p) {
   try {
@@ -820,6 +951,8 @@ function programarTodosNube() {
     if (!p.hecho && fechaHoraPlan(p) > ahora) programarAvisoNube(p);
   }
   for (const e of estado.examenes) programarAvisosExamenNube(e);
+  for (const d of estado.deberes) programarAvisosDeber(d);
+  programarHorarioNube();
 }
 
 // ---------- AVISOS DE EXAMEN ----------
@@ -937,6 +1070,14 @@ const ACCIONES = {
     programarAvisoNube(p);   // cambia la hora del aviso en la nube
     toast("⏳ Vale, a las " + p.hora + ". Ni un minuto más.");
   },
+  "empezar-descanso": function (b) { empezarDescanso(Number(b.dataset.min), b.dataset.objetivo, b.dataset.asig, Number(b.dataset.estudio)); },
+  "saltar-descanso": function () { terminarDescanso(false); },
+  "otra-sesion": function (b) { cerrarCapa(); empezarSesion(b.dataset.objetivo, b.dataset.asig, Number(b.dataset.min), null); },
+  "terminar-por-hoy": function () {
+    rondasSeguidas = 0;
+    cerrarCapa(); pintar();
+    toast("💜 Buen trabajo hoy. ¡Hasta mañana!");
+  },
   "rendirse": function () {
     if (!confirm("¿Seguro que quieres dejarlo? No contará para tu racha.")) return;
     clearInterval(relojFoco);
@@ -998,7 +1139,7 @@ const ACCIONES = {
 };
 
 // Añadimos los botones del horario semanal (están en horario.js)
-Object.assign(ACCIONES, ACCIONES_HORARIO);
+Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS);
 
 // Un solo "escuchador" para todos los clics de la app
 document.addEventListener("click", function (ev) {
@@ -1014,14 +1155,23 @@ document.addEventListener("click", function (ev) {
 ponerTema(temaGuardado());
 pintar();
 
-// Si cerraste la app en mitad de una sesión, sigue donde estaba
+// Si cerraste la app en mitad de una sesión o de un descanso, sigue donde estaba
 if (estado.sesionActual) abrirFoco();
+else if (estado.descanso) abrirDescanso();
 
 comprobarPlanes();
 setInterval(comprobarPlanes, 20000);
 
 // Si se abrió la app tocando un aviso de Apix, enseña la pantalla del plan
 function abrirDesdeAviso(planId) {
+  if (planId === "descanso") return;   // ya lo gestiona el arranque
+  if (planId.indexOf("deb-") === 0) { vistaAgenda = "deberes"; irA("agenda"); return; }
+  if (planId.indexOf("hor-") === 0) {
+    const b = (estado.horario || []).find(function (x) { return planId.indexOf("hor-" + x.id + "-") === 0; });
+    if (b && esAhora(b) && !estado.sesionActual) avisoBloque(b);
+    else { vistaAgenda = "horario"; irA("agenda"); }
+    return;
+  }
   // Aviso de examen ("ex-ID-antes" o "ex-ID-dia")
   if (planId.indexOf("ex-") === 0) {
     const e = estado.examenes.find(function (x) { return planId.indexOf("ex-" + x.id + "-") === 0; });
@@ -1041,7 +1191,12 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.ready.then(programarTodosNube);
 }
 document.addEventListener("visibilitychange", function () {
-  if (!document.hidden) { comprobarPlanes(); if (!estado.sesionActual && $("foco").hidden) pintar(); }
+  if (!document.hidden) {
+    // Si el descanso acabó mientras estabas fuera
+    if (estado.descanso && Date.now() >= estado.descanso.fin) { terminarDescanso(true); return; }
+    comprobarPlanes();
+    if (!estado.sesionActual && $("foco").hidden) pintar();
+  }
 });
 
 // Service worker: guarda la app para que funcione sin internet y permite los avisos

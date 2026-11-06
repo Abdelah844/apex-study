@@ -24,6 +24,7 @@ const FRASES_HOLA = [
   "¡Hola! Soy Apix. ¿Qué aprendemos hoy?",
   "Un poco cada día y llegarás lejos.",
   "Apunta tus exámenes y planifica cuándo empiezas. Yo te aviso.",
+  "Organiza tu semana en Agenda → Horario y no se te escapará nada.",
   "Hoy es buen día para aprender algo nuevo."
 ];
 
@@ -73,6 +74,28 @@ function estadoMascota() {
     const d = diasEntre(hoyF, examen.fecha);
     const cuando = d === 0 ? "es HOY" : d === 1 ? "es mañana" : "es en " + d + " días";
     return { humor: "anima", mensaje: "El examen de " + examen.asignatura + " " + cuando + ". ¡A repasar!" };
+  }
+
+  // 4b. Deberes que se entregan hoy o mañana y aún no están hechos
+  const deber = deberesPendientes().find(function (d) { return diasEntre(hoyF, d.fecha) >= 0 && diasEntre(hoyF, d.fecha) <= 1; });
+  if (deber) {
+    const cuando = deber.fecha === hoyF ? "hoy" : "mañana";
+    return {
+      humor: "anima", mensaje: "Entregas «" + deber.titulo + "» " + cuando + ". ¿Lo tienes hecho?",
+      boton: '<button class="btn auto" data-act="hecho-deber" data-id="' + deber.id + '">Ya está ✓</button>'
+    };
+  }
+
+  // 4c. Un examen de los últimos 7 días sin nota: Apix pregunta qué tal fue
+  const sinNota = estado.examenes.find(function (e) {
+    const d = diasEntre(e.fecha, hoyF);
+    return d >= 1 && d <= 7 && !notaDeExamen(e.id);
+  });
+  if (sinNota) {
+    return {
+      humor: "contento", mensaje: "¿Qué tal el examen de " + sinNota.asignatura + "? Cuando sepas la nota, apúntala y te calculo la media.",
+      boton: '<button class="btn auto" data-act="nota-de-examen" data-id="' + sinNota.id + '">Poner nota</button>'
+    };
   }
 
   // 5. Racha perdida (estudiabas y ayer no lo hiciste)

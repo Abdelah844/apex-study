@@ -156,6 +156,20 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; fon
 .sg-bloque small { display: block; max-width: 100%; font-size: .58rem; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sg-bloque.ahora { box-shadow: 0 0 0 2px var(--color-bloque); }
 
+/* ===== DEBERES Y NOTAS ===== */
+.check { width: 30px; height: 30px; flex: none; border-radius: 50%; border: 2px solid var(--surface3); color: transparent; font-weight: 900; display: grid; place-items: center; }
+.check.on { background: var(--good); border-color: var(--good); color: var(--on-good); }
+.deber.hecho .name { text-decoration: line-through; color: var(--muted); }
+.deber > .acciones { padding-left: 42px; }
+.icon-btn.mini { width: 30px; height: 30px; border-radius: 9px; font-size: 1.1rem; color: var(--muted); }
+.nota-fila { padding: 8px 0; }
+.nota-fila b { font-family: var(--display); font-size: 1.2rem; }
+.necesitas { background: var(--surface2); border-radius: 10px; padding: 9px 11px; }
+.tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tres .btn-sec { padding: 10px 4px; }
+.cal .puntos .d { background: var(--warn); }
+.anillo.descanso .avance { stroke: var(--good); }
+
 /* ===== CALENDARIO ===== */
 .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal .dsem { text-align: center; font-size: .68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; padding-bottom: 4px; }
@@ -264,6 +278,8 @@ nav.tabs button.on svg { color: var(--accent); filter: drop-shadow(0 0 6px var(-
 
 <script src="mascota.js"></script>
 <script src="horario.js"></script>
+<script src="deberes.js"></script>
+<script src="notas.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

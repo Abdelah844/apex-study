@@ -179,10 +179,23 @@ function tarjetaHorarioHoy() {
 
 // ---------- Formulario para añadir o editar un bloque ----------
 let tipoElegido = "clase";
+let avisarElegido = false;
+
+// Por defecto avisamos en los bloques de Estudio y Deberes (en las clases sería un rollo)
+function avisaBloque(b) {
+  if (b.avisar !== undefined) return b.avisar;
+  return b.tipo === "estudio" || b.tipo === "deberes";
+}
+
+function botonAvisar() {
+  return '<button class="chip ' + (avisarElegido ? "on" : "") + '" data-act="avisar-bloque" id="blAvisar">🔔 ' +
+    (avisarElegido ? "Apix me avisa al empezar" : "Sin aviso") + '</button>';
+}
 
 function hojaBloque(id) {
   const b = (estado.horario || []).find(function (x) { return x.id === id; });
   tipoElegido = b ? b.tipo : "clase";
+  avisarElegido = b ? avisaBloque(b) : false;
   const diasMarcados = b ? [b.dia] : [diaHorario];
 
   let tipos = "";
@@ -201,6 +214,7 @@ function hojaBloque(id) {
     '<div><p class="label" style="margin-bottom:8px">' + (b ? "Día" : "Días (puedes marcar varios)") + '</p><div class="dias-chips">' + dias + '</div></div>' +
     '<div class="dos"><label class="f">Empieza<input id="blInicio" type="time" value="' + (b ? b.inicio : "16:00") + '"></label>' +
     '<label class="f">Termina<input id="blFin" type="time" value="' + (b ? b.fin : "17:00") + '"></label></div>' +
+    '<div><p class="label" style="margin-bottom:8px">Aviso</p>' + botonAvisar() + '</div>' +
     '<p class="err" id="blErr"></p>' +
     '<button class="btn" data-act="guardar-bloque" data-id="' + (b ? b.id : "") + '">' + (b ? "Guardar cambios" : "Añadir") + '</button>');
 }
@@ -222,16 +236,22 @@ function guardarBloque(id) {
   if (aMinutos(fin) <= aMinutos(inicio)) { $("blErr").textContent = "La hora de terminar tiene que ser más tarde que la de empezar."; return; }
 
   estado.horario = estado.horario || [];
+  const cambiados = [];
   if (id) {
-    // Editar: cambiamos el bloque original con el primer día marcado...
+    // Editar: quitamos los avisos que tenía y cambiamos el bloque con el primer día marcado...
     const b = estado.horario.find(function (x) { return x.id === id; });
-    Object.assign(b, { titulo: titulo, tipo: tipoElegido, asignatura: asignatura, dia: dias[0], inicio: inicio, fin: fin });
+    cancelarAvisosBloque(b);
+    Object.assign(b, { titulo: titulo, tipo: tipoElegido, asignatura: asignatura, dia: dias[0], inicio: inicio, fin: fin, avisar: avisarElegido });
+    cambiados.push(b);
     dias.shift();
   }
   // ...y creamos uno nuevo por cada día que quede
   for (const d of dias) {
-    estado.horario.push({ id: nuevoId(), titulo: titulo, tipo: tipoElegido, asignatura: asignatura, dia: d, inicio: inicio, fin: fin });
+    const nuevo = { id: nuevoId(), titulo: titulo, tipo: tipoElegido, asignatura: asignatura, dia: d, inicio: inicio, fin: fin, avisar: avisarElegido };
+    estado.horario.push(nuevo);
+    cambiados.push(nuevo);
   }
+  for (const b of cambiados) programarAvisosBloque(b);
   guardar(); cerrarHoja();
   // Si choca con otra cosa del horario, avisamos (pero se guarda igual)
   const choque = buscarChoque(titulo, inicio, fin);
@@ -276,11 +296,20 @@ const ACCIONES_HORARIO = {
   "tipo-bloque": function (b) {
     tipoElegido = b.dataset.tipo;
     document.querySelectorAll('[data-act="tipo-bloque"]').forEach(function (c) { c.classList.toggle("on", c === b); });
+    // Al cambiar de tipo, ponemos el aviso que le toca por defecto
+    avisarElegido = tipoElegido === "estudio" || tipoElegido === "deberes";
+    $("blAvisar").outerHTML = botonAvisar();
+  },
+  "avisar-bloque": function () {
+    avisarElegido = !avisarElegido;
+    $("blAvisar").outerHTML = botonAvisar();
   },
   "marcar-dia": function (b) { b.classList.toggle("on"); },
   "guardar-bloque": function (b) { guardarBloque(b.dataset.id); },
   "borrar-bloque": function (b) {
     if (!confirm("¿Borrar este bloque del horario?")) return;
+    const viejo = estado.horario.find(function (x) { return x.id === b.dataset.id; });
+    if (viejo) cancelarAvisosBloque(viejo);
     estado.horario = estado.horario.filter(function (x) { return x.id !== b.dataset.id; });
     guardar(); pintar();
   },
@@ -291,7 +320,9 @@ const ACCIONES_HORARIO = {
     if (!destino.length) { $("blErr").textContent = "Marca al menos un día."; return; }
     for (const d of destino) {
       for (const b of bloquesDelDia(diaHorario)) {
-        estado.horario.push({ id: nuevoId(), titulo: b.titulo, tipo: b.tipo, asignatura: b.asignatura, dia: d, inicio: b.inicio, fin: b.fin });
+        const copia = { id: nuevoId(), titulo: b.titulo, tipo: b.tipo, asignatura: b.asignatura, dia: d, inicio: b.inicio, fin: b.fin, avisar: avisaBloque(b) };
+        estado.horario.push(copia);
+        programarAvisosBloque(copia);
       }
     }
     guardar(); cerrarHoja();
@@ -301,7 +332,78 @@ const ACCIONES_HORARIO = {
   // Empezar a estudiar desde un bloque de estudio: dura lo que le queda al bloque
   "empezar-bloque": function (b) {
     const bloque = estado.horario.find(function (x) { return x.id === b.dataset.id; });
-    const quedan = Math.max(5, aMinutos(bloque.fin) - minutosAhora());
+    // Lo que le queda al bloque, pero como mucho 50 min (luego toca descanso, como en Pomodoro)
+    const quedan = Math.min(50, Math.max(5, aMinutos(bloque.fin) - minutosAhora()));
+    cerrarCapa();
     empezarSesion(bloque.titulo, bloque.asignatura, quedan, null);
   }
 };
+
+// =====================================================
+// AVISOS DEL HORARIO
+// El servidor solo sabe mandar avisos de una fecha concreta, así que
+// programamos las próximas 2 semanas de cada bloque. Cada vez que abres
+// la app se vuelven a programar, así nunca se acaban.
+// =====================================================
+
+// Las veces que va a empezar este bloque en los próximos 14 días
+function proximasVecesBloque(b) {
+  const veces = [];
+  for (let i = 0; i < 14; i++) {
+    const fecha = sumarDias(hoy(), i);
+    const dia = (new Date(fecha + "T12:00:00").getDay() + 6) % 7;
+    if (dia !== b.dia) continue;
+    veces.push({
+      clave: "hor-" + b.id + "-" + fecha.replace(/-/g, ""),
+      cuando: new Date(fecha + "T" + b.inicio + ":00")
+    });
+  }
+  return veces;
+}
+
+function textoAvisoBloque(b) {
+  const t = TIPOS[b.tipo] || TIPOS.otro;
+  return "Son las " + b.inicio + ": toca «" + b.titulo + "» " + t.icono + " (hasta las " + b.fin + ").";
+}
+
+function programarAvisosBloque(b) {
+  if (!avisaBloque(b)) return;
+  for (const v of proximasVecesBloque(b)) avisoNube(v.clave, v.cuando, "Apix 🗓️", textoAvisoBloque(b));
+}
+
+function cancelarAvisosBloque(b) {
+  for (const v of proximasVecesBloque(b)) cancelarAvisoNube(v.clave);
+}
+
+// Reprograma todo el horario (como mucho una vez cada 6 horas, para no saturar)
+function programarHorarioNube() {
+  const ahora = Date.now();
+  if (estado.syncHorario && ahora - estado.syncHorario < 6 * 3600000) return;
+  estado.syncHorario = ahora;
+  guardar();
+  for (const b of estado.horario || []) programarAvisosBloque(b);
+}
+
+// Con la app abierta: si empieza un bloque con aviso, Apix sale en grande
+function comprobarHorario() {
+  for (const b of bloquesDelDia(diaDeHoy())) {
+    if (!avisaBloque(b)) continue;
+    const vez = proximasVecesBloque(b)[0];
+    if (!vez || fechaISO(vez.cuando) !== hoy()) continue;
+    if (yaToca(vez.clave, vez.cuando)) {
+      mostrarAviso("Apix 🗓️", textoAvisoBloque(b), vez.clave);
+      avisoBloque(b);
+      return true;
+    }
+  }
+  return false;
+}
+
+function avisoBloque(b) {
+  const t = TIPOS[b.tipo] || TIPOS.otro;
+  const estudio = b.tipo === "estudio" || b.tipo === "deberes";
+  mostrarCapa('<div class="msg">' + apixSVG("anima", "xl") + '<p class="label">Apix · ' + b.inicio + '</p>' +
+    '<h1>' + t.icono + ' ' + esc(b.titulo) + '</h1><p>Toca hasta las ' + b.fin + '. ' + (estudio ? FRASE_PALABRA : '¡Vamos!') + '</p>' +
+    (estudio ? '<button class="btn" data-act="empezar-bloque" data-id="' + b.id + '">Empezar ahora</button>' : '') +
+    '<button class="btn-sec full" data-act="cerrar-capa">Vale</button></div>');
+}
