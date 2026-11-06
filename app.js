@@ -23,6 +23,8 @@ function datosVacios() {
     deberes: [],     // { id, titulo, asignatura, fecha, hecho } (ver deberes.js)
     notas: [],       // { id, asignatura, nombre, nota, peso, examenId } (ver notas.js)
     objetivoNota: 5,
+    nivel: "todos",      // qué estudia: "eso", "bachillerato", "fp" o "todos"
+    misAsignaturas: [],  // asignaturas que añade el usuario (FP, universidad...)
     avisosVistos: [],    // avisos que ya se enseñaron con la app abierta
     descanso: null,      // el descanso Pomodoro en marcha
     syncHorario: 0,
@@ -180,15 +182,29 @@ const ASIGNATURAS = {
 };
 
 // Desplegable de asignaturas. Si eliges "Otra…", aparece una caja para escribirla.
+// Grupos que salen en el desplegable según lo que estudias
+//   Primero "Mis asignaturas"; luego ESO y/o Bachillerato (en FP solo las tuyas)
+function gruposAsignaturas() {
+  const grupos = {};
+  const mias = estado.misAsignaturas || [];
+  if (mias.length) grupos["Mis asignaturas"] = mias;
+  const nivel = estado.nivel || "todos";
+  if (nivel === "eso" || nivel === "todos") grupos["ESO"] = ASIGNATURAS["ESO"];
+  if (nivel === "bachillerato" || nivel === "todos") grupos["Bachillerato"] = ASIGNATURAS["Bachillerato"];
+  return grupos;
+}
+
 function selectorAsig(id, valor) {
-  const conocidas = ASIGNATURAS["ESO"].concat(ASIGNATURAS["Bachillerato"]);
+  const grupos = gruposAsignaturas();
+  let conocidas = [];
+  for (const g in grupos) conocidas = conocidas.concat(grupos[g]);
   const esOtra = valor && !conocidas.includes(valor);
   let html = '<select id="' + id + '" data-cambio="asig-otra">';
   html += '<option value="">Sin asignatura</option>';
-  for (const grupo in ASIGNATURAS) {
+  for (const grupo in grupos) {
     html += '<optgroup label="' + grupo + '">';
-    for (const a of ASIGNATURAS[grupo]) {
-      html += '<option' + (a === valor ? ' selected' : '') + '>' + a + '</option>';
+    for (const a of grupos[grupo]) {
+      html += '<option value="' + esc(a) + '"' + (a === valor ? ' selected' : '') + '>' + esc(a) + '</option>';
     }
     html += '</optgroup>';
   }
@@ -200,9 +216,28 @@ function selectorAsig(id, valor) {
 // Lee la asignatura elegida (del desplegable o de la caja "Otra")
 function leerAsig(id) {
   const elegida = $(id).value;
-  if (elegida === "otra") return $(id + "Otra").value.trim();
+  if (elegida === "otra") {
+    const nueva = $(id + "Otra").value.trim();
+    anadirMiAsignatura(nueva);   // la guardamos para que salga en la lista la próxima vez
+    return nueva;
+  }
   return elegida;
 }
+
+// Añade una asignatura a "Mis asignaturas" (si no estaba ya)
+function anadirMiAsignatura(nombre) {
+  if (!nombre) return false;
+  estado.misAsignaturas = estado.misAsignaturas || [];
+  const yaEsta = estado.misAsignaturas.some(function (a) { return a.toLowerCase() === nombre.toLowerCase(); });
+  if (yaEsta) return false;
+  estado.misAsignaturas.push(nombre);
+  return true;
+}
+
+// Pulsar Intro en la caja de nueva asignatura (Ajustes) = botón Añadir
+document.addEventListener("keydown", function (ev) {
+  if (ev.key === "Enter" && ev.target.id === "nuevaAsig") ACCIONES["anadir-mi-asig"]();
+});
 
 // Al cambiar el desplegable, enseña u oculta la caja "Otra"
 document.addEventListener("change", function (ev) {
@@ -559,7 +594,28 @@ function hojaAjustes() {
   else if (permiso === "no") avisos = '<p class="muted small">Este navegador no permite avisos. En iPhone, primero añade la app a la pantalla de inicio.</p>';
   else avisos = '<button class="btn" data-act="activar-avisos">Activar avisos de Apix</button>';
 
+  // Qué estudias
+  const niveles = [["eso", "ESO"], ["bachillerato", "Bachillerato"], ["fp", "FP"], ["todos", "Otro"]].map(function (n) {
+    return '<button class="' + ((estado.nivel || "todos") === n[0] ? "on" : "") + '" data-act="nivel" data-n="' + n[0] + '">' + n[1] + '</button>';
+  }).join("");
+  const mias = estado.misAsignaturas || [];
+  const listaMias = mias.map(function (a, i) {
+    return '<div class="item"><span class="punto-asig" style="background:' + colorAsig(a) + '"></span><span class="name grow">' + esc(a) + '</span>' +
+      '<button class="icon-btn mini" data-act="borrar-mi-asig" data-i="' + i + '" aria-label="Quitar">×</button></div>';
+  }).join("");
+  let ayuda = "Además de estas, verás las de ESO y Bachillerato.";
+  if (estado.nivel === "eso") ayuda = "Además de estas, verás las de la ESO.";
+  if (estado.nivel === "bachillerato") ayuda = "Además de estas, verás las de Bachillerato.";
+  if (estado.nivel === "fp") ayuda = "En FP solo verás las que añadas aquí (los módulos de tu ciclo).";
+
   abrirHoja('<div class="row between"><h2>Ajustes</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+    '<div class="card stack tight"><h3>¿Qué estudias?</h3><div class="seg">' + niveles + '</div></div>' +
+    '<div class="card stack tight"><h3>Mis asignaturas</h3>' +
+      '<p class="muted small">' + ayuda + '</p>' +
+      (listaMias ? '<div class="list">' + listaMias + '</div>' : '') +
+      '<div class="row"><input id="nuevaAsig" class="grow" placeholder="' + (estado.nivel === "fp" ? "Ej: Redes Locales" : "Ej: Robótica") + '" maxlength="40">' +
+      '<button class="btn auto" data-act="anadir-mi-asig">Añadir</button></div>' +
+      '<p class="err" id="asigErr"></p></div>' +
     '<div class="card stack tight"><h3>Apariencia</h3>' +
       '<div class="seg">' +
         ['auto', 'claro', 'oscuro'].map(function (t) {
@@ -1043,6 +1099,21 @@ const ACCIONES = {
   "ajustes": function () { hojaAjustes(); },
   "cerrar-hoja": function () { cerrarHoja(); },
   "tema": function (b) { ponerTema(b.dataset.tema); hojaAjustes(); },
+  "nivel": function (b) { estado.nivel = b.dataset.n; guardar(); hojaAjustes(); },
+  "anadir-mi-asig": function () {
+    const nombre = $("nuevaAsig").value.trim();
+    if (!nombre) { $("asigErr").textContent = "Escribe el nombre de la asignatura."; return; }
+    if (!anadirMiAsignatura(nombre)) { $("asigErr").textContent = "Esa ya la tienes."; return; }
+    guardar(); hojaAjustes();
+    toast("📘 " + nombre + " añadida");
+    setTimeout(function () { if ($("nuevaAsig")) $("nuevaAsig").focus(); }, 50);   // para añadir otra seguida
+  },
+  "borrar-mi-asig": function (b) {
+    const nombre = estado.misAsignaturas[Number(b.dataset.i)];
+    if (!confirm("¿Quitar «" + nombre + "» de tu lista? (Lo que ya hayas apuntado con ella se queda)")) return;
+    estado.misAsignaturas.splice(Number(b.dataset.i), 1);
+    guardar(); hojaAjustes();
+  },
   "cerrar-capa": function () { cerrarCapa(); pintar(); },
 
   // Estudiar
