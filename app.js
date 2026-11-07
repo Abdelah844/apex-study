@@ -624,9 +624,9 @@ function hojaAjustes() {
         }).join("") +
       '</div><p class="muted small">Automático usa el mismo modo que tu móvil.</p></div>' +
     '<div class="card stack tight"><h3>Avisos</h3><p class="muted small">Apix te avisará cuando llegue la hora de empezar a estudiar.</p>' + avisos + '</div>' +
-    '<div class="card stack tight"><h3>Instalar en el móvil</h3>' +
-      (appInstalada() ? '<p class="small">✓ Ya estás usando Apex Study como app.</p>' :
-        '<p class="muted small">En Android (Chrome): menú ⋮ → «Instalar aplicación». En iPhone (Safari): Compartir → «Añadir a pantalla de inicio».</p>') + '</div>' +
+    // Cómo instalarla: solo sale si aún la usas desde el navegador
+    (appInstalada() ? '' : '<div class="card stack tight"><h3>Instalar en el móvil</h3>' +
+      '<p class="muted small">En Android (Chrome): menú ⋮ → «Instalar aplicación». En iPhone (Safari): Compartir → «Añadir a pantalla de inicio».</p></div>') +
     '<div class="card stack tight"><h3>Tus datos</h3><p class="muted small">Se guardan solo en este móvil.</p>' +
       '<button class="btn-sec btn-danger" data-act="borrar-todo">Borrar todos los datos</button></div>');
 }
