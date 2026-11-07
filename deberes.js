@@ -129,7 +129,12 @@ const ACCIONES_DEBERES = {
     const d = estado.deberes.find(function (x) { return x.id === b.dataset.id; });
     if (!d) return;
     d.hecho = !d.hecho;
-    if (d.hecho) { cancelarAvisosDeber(d); toast("✓ ¡Uno menos!"); }
+    if (d.hecho) {
+      cancelarAvisosDeber(d);
+      vibrar(25);
+      if (deberesPendientes().length === 0) { confeti(); toast("🎉 ¡Todos los deberes hechos!"); }
+      else toast("✓ ¡Uno menos!");
+    }
     else programarAvisosDeber(d);
     guardar(); cerrarCapa(); pintar();
   },

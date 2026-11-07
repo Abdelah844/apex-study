@@ -21,7 +21,8 @@ const FRASES_ESTUDIO = [
 
 // Frases de Inicio cuando no hay nada especial
 const FRASES_HOLA = [
-  "¡Hola! Soy Apix. ¿Qué aprendemos hoy?",
+  "¿Qué aprendemos hoy?",
+  "Crea tarjetas de repaso en Estudiar → Tarjetas. Yo te las pregunto.",
   "Un poco cada día y llegarás lejos.",
   "Apunta tus exámenes y planifica cuándo empiezas. Yo te aviso.",
   "Organiza tu semana en Agenda → Horario y no se te escapará nada.",
@@ -98,6 +99,15 @@ function estadoMascota() {
     };
   }
 
+  // 4d. Tarjetas que tocan hoy
+  const tarjetasHoy = tarjetasParaHoy(null).length;
+  if (tarjetasHoy) {
+    return {
+      humor: "estudia", mensaje: "Tienes " + tarjetasHoy + (tarjetasHoy === 1 ? " tarjeta" : " tarjetas") + " para repasar hoy. ¿Un repaso rápido?",
+      boton: '<button class="btn auto" data-act="repasar" data-asig="">Repasar</button>'
+    };
+  }
+
   // 5. Racha perdida (estudiabas y ayer no lo hiciste)
   const perdida = rachaPerdida();
   if (perdida >= 2) {
@@ -105,7 +115,8 @@ function estadoMascota() {
   }
 
   // 6. Normal
-  return { humor: "estudia", mensaje: fraseDelDia(FRASES_HOLA) };
+  const saludo = estado.nombre ? "¡Hola, " + estado.nombre + "! " : "";
+  return { humor: "estudia", mensaje: saludo + fraseDelDia(FRASES_HOLA) };
 }
 
 // ---------- Dibujo de Apix ----------

@@ -25,6 +25,10 @@ function datosVacios() {
     objetivoNota: 5,
     nivel: "todos",      // qué estudia: "eso", "bachillerato", "fp" o "todos"
     misAsignaturas: [],  // asignaturas que añade el usuario (FP, universidad...)
+    tarjetas: [],        // tarjetas de repaso (ver tarjetas.js)
+    nombre: "",          // cómo se llama (lo pregunta Apix en la bienvenida)
+    bienvenidaVista: false,
+    sonido: "nada",      // sonido para concentrarse (ver sonidos.js)
     avisosVistos: [],    // avisos que ya se enseñaron con la app abierta
     descanso: null,      // el descanso Pomodoro en marcha
     syncHorario: 0,
@@ -334,7 +338,7 @@ function pintarInicio() {
   const planes = proximosPlanes().slice(0, 3);
 
   $("app").innerHTML = '<div class="stack">' +
-    cabecera("Apex Study", fechaLarga(hoy())) +
+    cabecera(estado.nombre ? "Hola, " + esc(estado.nombre) : "Apex Study", fechaLarga(hoy())) +
     tarjetaApix(apix.humor, "Apix", apix.mensaje, botonApix) +
     '<div class="card hero stack tight">' +
       '<div class="grid3">' +
@@ -358,6 +362,14 @@ function pintarInicio() {
 
 // ===== Pestaña ESTUDIAR =====
 function pintarEstudiar() {
+  const paraHoy = tarjetasParaHoy(null).length;
+  const seg = '<div class="seg">' +
+    '<button class="' + (vistaEstudiar === "sesion" ? "on" : "") + '" data-act="vista-estudiar" data-v="sesion">⏱️ Sesión</button>' +
+    '<button class="' + (vistaEstudiar === "tarjetas" ? "on" : "") + '" data-act="vista-estudiar" data-v="tarjetas">🃏 Tarjetas' + (paraHoy ? ' (' + paraHoy + ')' : '') + '</button></div>';
+  if (vistaEstudiar === "tarjetas") {
+    $("app").innerHTML = '<div class="stack">' + cabecera("Estudiar", "Tarjetas de repaso") + seg + vistaTarjetasHTML() + '</div>';
+    return;
+  }
   const tiempos = [15, 25, 45, 60, 90];
   const chips = tiempos.map(function (m) {
     return '<button class="chip ' + (m === minutosElegidos ? "on" : "") + '" data-act="tiempo" data-min="' + m + '">' + m + ' min</button>';
@@ -365,7 +377,7 @@ function pintarEstudiar() {
   const planesHoy = planesDelDia(hoy()).filter(function (p) { return !p.hecho; });
 
   $("app").innerHTML = '<div class="stack">' +
-    cabecera("Estudiar", "Sesión de concentración") +
+    cabecera("Estudiar", "Sesión de concentración") + seg +
     tarjetaApix("estudia", "Apix", "Dime qué vas a aprender y cuánto tiempo. Yo vigilo que no te escapes al móvil.", "") +
     '<div class="card stack">' +
       '<label class="f">¿Qué quieres aprender?<input id="objetivo" placeholder="Ej: ecuaciones, gramática..." maxlength="80"></label>' +
@@ -531,6 +543,53 @@ function pintarProgreso() {
     '</div></div></div>';
 }
 
+// ---------- COPIA DE SEGURIDAD ----------
+// Descarga todos tus datos en un archivo .json (texto con tus datos ordenados)
+function exportarDatos() {
+  const texto = JSON.stringify({ app: "apex-study", version: 1, fecha: hoy(), datos: estado }, null, 2);
+  const archivo = new Blob([texto], { type: "application/json" });
+  const enlace = document.createElement("a");
+  enlace.href = URL.createObjectURL(archivo);
+  enlace.download = "apex-study-copia-" + hoy() + ".json";
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  toast("💾 Copia guardada en Descargas");
+}
+
+// Lee un archivo de copia y cambia los datos actuales por los de la copia
+function importarDatos(archivo) {
+  const lector = new FileReader();
+  lector.onload = function () {
+    try {
+      const copia = JSON.parse(lector.result);
+      if (copia.app !== "apex-study" || !copia.datos || !Array.isArray(copia.datos.sesiones)) throw new Error("no es una copia");
+      if (!confirm("Se cambiarán tus datos actuales por los de la copia del " + copia.fecha + ". ¿Seguro?")) return;
+      estado = Object.assign(datosVacios(), copia.datos);
+      estado.sesionActual = null;
+      estado.descanso = null;
+      guardar();
+      cerrarHoja();
+      programarTodosNube();
+      irA("inicio");
+      toast("📂 Copia recuperada");
+    } catch (e) {
+      toast("Ese archivo no es una copia de Apex Study");
+    }
+  };
+  lector.readAsText(archivo);
+}
+
+document.addEventListener("change", function (ev) {
+  if (ev.target.id === "archivoCopia" && ev.target.files[0]) importarDatos(ev.target.files[0]);
+  if (ev.target.dataset.cambio === "nombre") {
+    estado.nombre = ev.target.value.trim();
+    guardar();
+    toast("✓ Nombre guardado");
+    pintar();
+  }
+});
+
 // ---------- 5. FORMULARIOS (hoja inferior) ----------
 function abrirHoja(html) {
   $("hoja").innerHTML = '<div class="sheet stack">' + html + '</div>';
@@ -609,6 +668,7 @@ function hojaAjustes() {
   if (estado.nivel === "fp") ayuda = "En FP solo verás las que añadas aquí (los módulos de tu ciclo).";
 
   abrirHoja('<div class="row between"><h2>Ajustes</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+    '<div class="card stack tight"><h3>Tu nombre</h3><input id="ajNombre" data-cambio="nombre" maxlength="20" placeholder="¿Cómo te llamas?" value="' + esc(estado.nombre || "") + '"></div>' +
     '<div class="card stack tight"><h3>¿Qué estudias?</h3><div class="seg">' + niveles + '</div></div>' +
     '<div class="card stack tight"><h3>Mis asignaturas</h3>' +
       '<p class="muted small">' + ayuda + '</p>' +
@@ -627,7 +687,10 @@ function hojaAjustes() {
     // Cómo instalarla: solo sale si aún la usas desde el navegador
     (appInstalada() ? '' : '<div class="card stack tight"><h3>Instalar en el móvil</h3>' +
       '<p class="muted small">En Android (Chrome): menú ⋮ → «Instalar aplicación». En iPhone (Safari): Compartir → «Añadir a pantalla de inicio».</p></div>') +
-    '<div class="card stack tight"><h3>Tus datos</h3><p class="muted small">Se guardan solo en este móvil.</p>' +
+    '<div class="card stack tight"><h3>Tus datos</h3><p class="muted small">Se guardan solo en este móvil. Haz una copia de vez en cuando por si lo cambias o se borra.</p>' +
+      '<div class="dos"><button class="btn-sec" data-act="exportar">💾 Guardar copia</button>' +
+      '<button class="btn-sec" data-act="importar">📂 Recuperar copia</button></div>' +
+      '<input type="file" id="archivoCopia" accept=".json,application/json" hidden>' +
       '<button class="btn-sec btn-danger" data-act="borrar-todo">Borrar todos los datos</button></div>');
 }
 
@@ -702,8 +765,10 @@ function abrirFoco() {
     '<div class="bocadillo"><p id="focoFrase"></p></div>' +
     '<div class="anillo"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="fondo"/><circle cx="50" cy="50" r="44" class="avance" id="focoAnillo" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><span class="t num" id="focoReloj">--:--</span></div>' +
     '<p class="muted small" id="focoSalidas"></p>' +
+    botonesSonido() +
     '<button class="btn-sec" data-act="rendirse">Me rindo</button></div>';
   focoHumor = "";
+  sonar(estado.sonido || "nada");
   actualizarFoco();
   clearInterval(relojFoco);
   relojFoco = setInterval(actualizarFoco, 1000);   // se repite cada segundo
@@ -763,6 +828,8 @@ function terminarSesion() {
   estado.mejorRacha = Math.max(estado.mejorRacha, rachaActual());
   guardar();
   cerrarFoco();
+  confeti();
+  vibrar([120, 60, 120]);
   mostrarAviso("Apix 🎉", "¡Objetivo cumplido! " + s.min + " min de " + s.objetivo + ".");
 
   let extra = s.distracciones ? "Saliste " + s.distracciones + (s.distracciones === 1 ? " vez" : " veces") + ". La próxima, a por 0." : "¡Sin salir ni una vez! Eres una máquina.";
@@ -839,6 +906,7 @@ function terminarDescanso(porTiempo) {
 }
 
 function cerrarFoco() {
+  pararSonido();
   $("foco").hidden = true;
   $("foco").innerHTML = "";
   $("tabs").hidden = false;
@@ -878,7 +946,7 @@ function mostrarAviso(titulo, texto, etiqueta) {
 
 // Mira si ha llegado la hora de algún plan. Se ejecuta al abrir, al volver y cada 20 segundos.
 function comprobarPlanes() {
-  if (estado.sesionActual || estado.descanso) return;
+  if (estado.sesionActual || estado.descanso || repaso) return;
   if (!$("capa").hidden) return;   // ya hay un aviso en pantalla
   comprobarExamenes();
   if (!$("capa").hidden) return;
@@ -1099,6 +1167,8 @@ const ACCIONES = {
   "ajustes": function () { hojaAjustes(); },
   "cerrar-hoja": function () { cerrarHoja(); },
   "tema": function (b) { ponerTema(b.dataset.tema); hojaAjustes(); },
+  "exportar": function () { exportarDatos(); },
+  "importar": function () { $("archivoCopia").click(); },
   "nivel": function (b) { estado.nivel = b.dataset.n; guardar(); hojaAjustes(); },
   "anadir-mi-asig": function () {
     const nombre = $("nuevaAsig").value.trim();
@@ -1210,7 +1280,7 @@ const ACCIONES = {
 };
 
 // Añadimos los botones del horario semanal (están en horario.js)
-Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS);
+Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS, ACCIONES_TARJETAS, ACCIONES_SONIDOS, ACCIONES_BIENVENIDA);
 
 // Un solo "escuchador" para todos los clics de la app
 document.addEventListener("click", function (ev) {
@@ -1229,6 +1299,7 @@ pintar();
 // Si cerraste la app en mitad de una sesión o de un descanso, sigue donde estaba
 if (estado.sesionActual) abrirFoco();
 else if (estado.descanso) abrirDescanso();
+else if (!estado.bienvenidaVista) abrirBienvenida();   // primera vez: Apix se presenta
 
 comprobarPlanes();
 setInterval(comprobarPlanes, 20000);

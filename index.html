@@ -87,8 +87,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .icon-btn { width: 38px; height: 38px; border-radius: 11px; background: var(--surface2); display: grid; place-items: center; flex: none; }
 .icon-btn svg { width: 18px; height: 18px; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-input, select { font: inherit; font-size: 16px; appearance: auto; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
-input:focus, select:focus { border-color: var(--accent); outline: none; }
+input, select, textarea { font: inherit; font-size: 16px; appearance: auto; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
 label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: .84rem; }
 .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -173,6 +173,45 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; fon
 .cal .puntos .d { background: var(--warn); }
 .anillo.descanso .avance { stroke: var(--good); }
 
+/* ===== TARJETAS DE REPASO ===== */
+textarea { resize: vertical; line-height: 1.4; }
+.flashcard { position: relative; width: 100%; min-height: 260px; perspective: 1200px; padding: 0; background: none; }
+.flashcard .cara { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px;
+  border-radius: 22px; background: var(--surface); border: 1px solid var(--edge); box-shadow: 0 14px 40px -16px var(--glow);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: transform .45s ease; }
+.flashcard .detras { transform: rotateY(180deg); border-color: var(--accent); }
+.flashcard.girada .delante { transform: rotateY(-180deg); }
+.flashcard.girada .detras { transform: rotateY(0); }
+.flashcard .texto { font-size: 1.25rem; font-weight: 700; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; }
+.respuestas { width: 100%; }
+.respuestas .btn-sec { padding: 12px 4px; line-height: 1.3; }
+.respuestas .mal { color: var(--danger); }
+.respuestas .regular { color: var(--warn); }
+.respuestas .bien { color: var(--good); }
+
+/* ===== SONIDOS ===== */
+.sonidos { justify-content: center; }
+.sonidos .chip { font-size: .78rem; padding: 7px 11px; }
+
+/* ===== BIENVENIDA ===== */
+.capa .msg.bienvenida { max-width: 380px; }
+.pasos { display: flex; gap: 6px; }
+.pasos i { width: 8px; height: 8px; border-radius: 99px; background: var(--surface3); transition: width .2s; }
+.pasos i.on { width: 22px; background: var(--accent); }
+.opcion { padding: 14px 8px; border-radius: 14px; background: var(--surface2); font-weight: 800; border: 2px solid transparent; }
+.opcion.on { border-color: var(--accent); background: var(--accent-soft); }
+.capa textarea { width: 100%; }
+
+/* ===== EFECTOS ===== */
+.confeti { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+.confeti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: caer linear forwards; }
+@keyframes caer { to { top: 105%; transform: translateX(40px) rotate(720deg); } }
+#app > .stack { animation: aparecer .22s ease-out; }
+@keyframes aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.check.on { animation: pop .25s ease-out; }
+@keyframes pop { 50% { transform: scale(1.25); } }
+button:active { transform: scale(.97); }
+
 /* ===== CALENDARIO ===== */
 .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal .dsem { text-align: center; font-size: .68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; padding-bottom: 4px; }
@@ -250,7 +289,7 @@ nav.tabs button svg { width: 22px; height: 22px; }
 nav.tabs button.on { color: var(--fg); }
 nav.tabs button.on svg { color: var(--accent); filter: drop-shadow(0 0 6px var(--glow)); }
 
-@media (prefers-reduced-motion: reduce) { .apix, .apix-fuego, #hoja .sheet, .capa .msg { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .apix, .apix-fuego, #hoja .sheet, .capa .msg, #app > .stack, .check.on { animation: none !important; } .flashcard .cara { transition: none; } }
 </style>
 </head>
 <body>
@@ -283,6 +322,9 @@ nav.tabs button.on svg { color: var(--accent); filter: drop-shadow(0 0 6px var(-
 <script src="horario.js"></script>
 <script src="deberes.js"></script>
 <script src="notas.js"></script>
+<script src="tarjetas.js"></script>
+<script src="sonidos.js"></script>
+<script src="bienvenida.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
