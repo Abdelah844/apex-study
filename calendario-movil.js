@@ -101,6 +101,17 @@ async function exportarCalendario() {
   if (!total) { toast("No hay nada que añadir todavía"); return; }
   const archivo = new File([texto], "apex-study.ics", { type: "text/calendar" });
 
+  // En iPhone, el menú de compartir no ofrece "Calendario". Abriendo el archivo
+  // directamente, iOS enseña los eventos con el botón "Añadir todo".
+  const esIphone = /iPhone|iPad/.test(navigator.platform) || /iPhone|iPad/.test(navigator.userAgent);
+  if (esIphone) {
+    const url = "data:text/calendar;charset=utf-8," + encodeURIComponent(texto);
+    const ventana = window.open(url, "_blank");
+    if (!ventana) location.href = url;   // si no deja abrir otra ventana, en esta misma
+    toast("📲 Pulsa «Añadir todo» para guardar " + total + " eventos");
+    return;
+  }
+
   try {
     if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
       await navigator.share({ files: [archivo], title: "Apex Study" });
