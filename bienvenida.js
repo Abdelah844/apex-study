@@ -49,6 +49,7 @@ function pintarBienvenida() {
       '<h1>Yo te aviso</h1>' +
       '<p>Te recordaré los exámenes, los deberes y cuándo dijiste que empezarías a estudiar. ' +
       '<b>' + FRASE_PALABRA + '</b></p>' +
+      '<p class="muted small">Si tienes menos de 14 años, pide permiso a tus padres antes de activarlos. <a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></p>' +
       (permiso === "granted" ? '<p class="small">✓ Los avisos ya están activados.</p><button class="btn" data-act="bienvenida-siguiente">Siguiente</button>'
         : permiso === "default" ? '<button class="btn" data-act="bienvenida-avisos">Activar avisos</button><button class="btn-txt" data-act="bienvenida-siguiente">Ahora no</button>'
         : '<p class="muted small">En este navegador no se pueden activar. Puedes probar más tarde desde Ajustes.</p><button class="btn" data-act="bienvenida-siguiente">Siguiente</button>');

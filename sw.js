@@ -6,10 +6,11 @@
 // Si cambias algún archivo, sube el número de VERSION.
 // =====================================================
 
-const VERSION = "apex-study-2.5.0";
+const VERSION = "apex-study-3.0.0";
 
 const ARCHIVOS = [
-  "./", "./index.html", "./manifest.json", "./app.js", "./mascota.js", "./horario.js", "./deberes.js", "./notas.js", "./tarjetas.js", "./sonidos.js", "./bienvenida.js",
+  "./", "./index.html", "./privacidad.html", "./manifest.json", "./app.js", "./datos.js", "./pantallas.js", "./formularios.js", "./ajustes.js", "./sesion.js", "./avisos.js",
+  "./mascota.js", "./horario.js", "./deberes.js", "./notas.js", "./tarjetas.js", "./sonidos.js", "./bienvenida.js",
   "./iconos/icono-192.png", "./iconos/icono-512.png",
   "./manrope.woff", "./chakra-petch-medium.woff", "./chakra-petch-semibold.woff", "./chakra-petch-bold.woff"
 ];

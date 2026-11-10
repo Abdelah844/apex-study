@@ -170,23 +170,34 @@ function pintarRepaso(girada) {
     '</div>';
 }
 
+// Cambia la caja y la próxima fecha de una tarjeta según la respuesta (sistema Leitner)
+//   "si": sube de caja · "casi": se queda y vuelve mañana · "no": vuelve a la caja 1 y sale hoy
+function aplicarRespuesta(t, r, fechaHoy) {
+  if (r === "si") {
+    t.caja = Math.min(5, t.caja + 1);
+    t.proxima = sumarDias(fechaHoy, DIAS_CAJA[t.caja] || 1);
+  } else if (r === "casi") {
+    t.proxima = sumarDias(fechaHoy, 1);
+  } else {
+    t.caja = 1;
+    t.proxima = fechaHoy;
+  }
+  return t;
+}
+
 // Apunta cómo te ha ido con la tarjeta y pasa a la siguiente
 function responderTarjeta(r) {
   const t = estado.tarjetas.find(function (x) { return x.id === repaso.cola[0]; });
   repaso.cola.shift();
+  aplicarRespuesta(t, r, hoy());
 
   if (r === "si") {
-    t.caja = Math.min(5, t.caja + 1);              // sube de caja
-    t.proxima = sumarDias(hoy(), DIAS_CAJA[t.caja] || 1);
     repaso.hechas++;
     if (!repaso.fallidas.includes(t.id)) repaso.sabidas++;   // solo cuenta si fue a la primera
   } else if (r === "casi") {
-    t.proxima = sumarDias(hoy(), 1);                // se queda en su caja, mañana otra vez
     repaso.hechas++;
   } else {
-    t.caja = 1;                                     // vuelve a la caja 1...
-    t.proxima = hoy();
-    repaso.cola.push(t.id);                         // ...y sale otra vez al final de este repaso
+    repaso.cola.push(t.id);                         // la fallada sale otra vez al final de este repaso
     if (!repaso.fallidas.includes(t.id)) repaso.fallidas.push(t.id);
     repaso.falladas++;
     repaso.total++;

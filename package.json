@@ -1,0 +1,12 @@
+{
+  "name": "apex-study",
+  "version": "3.0.0",
+  "description": "App para estudiantes: exámenes, deberes, horario, notas, tarjetas de repaso y sesiones de estudio con Apix",
+  "private": true,
+  "scripts": {
+    "test": "node test/correr.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
