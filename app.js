@@ -306,8 +306,8 @@ function filaPlan(p, conBotones) {
   const st = estadoPlan(p);
   let botones = "";
   if (conBotones) {
-    if (!p.hecho && p.fecha === hoy()) botones += '<button class="btn auto" data-act="empezar-plan" data-id="' + p.id + '">Empezar</button>';
-    if (!p.hecho && st.clase === "pend") botones += '<a class="btn-sec" target="_blank" rel="noopener" href="' + enlaceGoogleCalendar(p) + '">📅 Calendario</a>';
+    // Puedes ponerte a estudiar ya, aunque el plan sea para más tarde
+    if (!p.hecho) botones += '<button class="btn auto" data-act="empezar-plan" data-id="' + p.id + '">▶ Estudiar</button>';
     botones += '<button class="btn-sec btn-danger" data-act="borrar-plan" data-id="' + p.id + '">Borrar</button>';
   }
   return '<div class="item"><div class="dia-caja"><b>' + p.hora + '</b><span>' + (p.fecha === hoy() ? "hoy" : fechaCorta(p.fecha)) + '</span></div>' +
@@ -648,7 +648,8 @@ function ponerTema(tema) {
 function hojaAjustes() {
   let avisos;
   const permiso = permisoAvisos();
-  if (permiso === "granted") avisos = '<p class="small">✓ Avisos activados</p><button class="btn-sec" data-act="probar-aviso">Probar aviso</button>';
+  if (permiso === "granted") avisos = '<p class="small">✓ Avisos activados</p><div class="dos"><button class="btn-sec" data-act="probar-aviso">Probar aviso</button>' +
+    '<button class="btn-sec" data-act="diagnostico-avisos">Probar con la app cerrada</button></div>';
   else if (permiso === "denied") avisos = '<p class="muted small">Has bloqueado los avisos. Actívalos en los ajustes del navegador para esta página.</p>';
   else if (permiso === "no") avisos = '<p class="muted small">Este navegador no permite avisos. En iPhone, primero añade la app a la pantalla de inicio.</p>';
   else avisos = '<button class="btn" data-act="activar-avisos">Activar avisos de Apix</button>';
@@ -731,18 +732,6 @@ function guardarPlan(minutos) {
   }
 }
 
-// Enlace para añadir el plan a Google Calendar (así te avisa aunque la app esté cerrada)
-function enlaceGoogleCalendar(p) {
-  const inicio = fechaHoraPlan(p);
-  const fin = new Date(inicio.getTime() + p.min * 60000);
-  function formato(d) { return fechaISO(d).replace(/-/g, "") + "T" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "00"; }
-  const zona = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return "https://calendar.google.com/calendar/render?action=TEMPLATE" +
-    "&text=" + encodeURIComponent("📚 " + p.objetivo + " (Apex Study)") +
-    "&dates=" + formato(inicio) + "/" + formato(fin) +
-    "&details=" + encodeURIComponent("Apix: " + FRASE_PALABRA) +
-    "&ctz=" + encodeURIComponent(zona);
-}
 
 // ---------- 6. SESIÓN DE ESTUDIO ----------
 function empezarSesion(objetivo, asignatura, minutos, planId) {
@@ -989,8 +978,54 @@ function llamarSupabase(funcion, datos) {
     headers: { "apikey": SUPABASE_CLAVE, "Content-Type": "application/json" },
     body: JSON.stringify(datos)
   }).then(function (r) {
-    if (!r.ok) throw new Error("Supabase respondió " + r.status);
+    if (r.ok) return;
+    // Si falla, leemos el mensaje de error para poder enseñarlo
+    return r.text().then(function (texto) { throw new Error("Supabase " + r.status + ": " + texto.slice(0, 200)); });
   });
+}
+
+// =====================================================
+// DIAGNÓSTICO DE AVISOS
+// Comprueba paso a paso si los avisos con la app cerrada pueden funcionar
+// y programa uno de prueba para dentro de 2 minutos.
+// =====================================================
+async function diagnosticoAvisos() {
+  const pasos = [];
+  function paso(ok, texto) { pasos.push((ok ? "✅ " : "❌ ") + texto); pintarPasos(); return ok; }
+  function pintarPasos() {
+    mostrarCapa('<div class="msg">' + apixSVG("estudia", "lg") + '<h1>Revisando avisos</h1>' +
+      '<div class="card diag">' + pasos.map(function (t) { return '<p>' + esc(t) + '</p>'; }).join("") + '</div>' +
+      '<button class="btn-sec full" data-act="cerrar-capa">Cerrar</button></div>');
+  }
+
+  if (!paso(permisoAvisos() === "granted", "Permiso de avisos: " + permisoAvisos())) return;
+  const esIphone = /iPhone|iPad/.test(navigator.userAgent);
+  if (esIphone && !paso(appInstalada(), "En iPhone hay que abrirla desde el icono de la pantalla de inicio")) return;
+  if (!paso("serviceWorker" in navigator && "PushManager" in window, "El móvil admite avisos push")) return;
+
+  let sub;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    paso(true, "Service worker activo");
+    sub = await suscripcionPush();
+    if (!paso(!!sub, "Dirección de avisos del móvil")) return;
+    paso(true, "Servicio de avisos: " + new URL(sub.endpoint).host);
+  } catch (e) {
+    paso(false, "Error al crear la dirección de avisos: " + e.message);
+    return;
+  }
+
+  try {
+    const cuando = new Date(Date.now() + 2 * 60000);
+    await llamarSupabase("study_programar_aviso", {
+      p_endpoint: sub.endpoint, p_suscripcion: sub, p_plan: "prueba",
+      p_cuando: cuando.toISOString(), p_titulo: "Apix 🔔", p_cuerpo: "¡Si ves esto con la app cerrada, los avisos funcionan!"
+    });
+    paso(true, "Aviso de prueba guardado en Supabase para las " + cuando.toTimeString().slice(0, 5));
+    paso(true, "Ahora CIERRA la app del todo y espera 2 minutos.");
+  } catch (e) {
+    paso(false, "No se pudo guardar en Supabase → " + e.message);
+  }
 }
 
 // La clave VAPID viene en texto (base64) y el navegador la quiere en bytes
@@ -1271,6 +1306,7 @@ const ACCIONES = {
     });
   },
   "probar-aviso": function () { mostrarAviso("Apix 📚", FRASE_PALABRA); },
+  "diagnostico-avisos": function () { cerrarHoja(); diagnosticoAvisos(); },
   "borrar-todo": function () {
     if (!confirm("Se borrarán tus exámenes, planes y sesiones. ¿Seguro?")) return;
     cancelarAvisoNube(null);

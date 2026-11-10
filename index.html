@@ -90,7 +90,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 input, select, textarea { font: inherit; font-size: 16px; appearance: auto; color: var(--fg); background: var(--surface2); border: 1px solid transparent; border-radius: 11px; padding: 11px 12px; width: 100%; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
 label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: .84rem; }
-.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.dos > * { min-width: 0; }
+/* En iPhone las cajas de fecha y hora se salían por la derecha */
+input[type=date], input[type=time] { -webkit-appearance: none; appearance: none; min-width: 0; min-height: 44px; }
+.diag { text-align: left; width: 100%; font-size: .88rem; display: flex; flex-direction: column; gap: 6px; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { background: var(--surface2); padding: 8px 13px; border-radius: 99px; white-space: nowrap; font-size: .84rem; font-weight: 700; color: var(--muted); }
 .chip.on { background: var(--fg); color: var(--bg); }
@@ -166,6 +170,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; fon
 .deber > .acciones { padding-left: 42px; }
 .icon-btn.mini { width: 30px; height: 30px; border-radius: 9px; font-size: 1.1rem; color: var(--muted); }
 .nota-fila { padding: 8px 0; }
+.nota-editar { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 1px; padding: 0; }
 .nota-fila b { font-family: var(--display); font-size: 1.2rem; }
 .necesitas { background: var(--surface2); border-radius: 10px; padding: 9px 11px; }
 .tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

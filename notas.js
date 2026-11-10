@@ -1,21 +1,44 @@
 // =====================================================
 // APEX STUDY · MIS NOTAS
-// Cada nota: { id, asignatura, nombre, nota, peso, examenId }
-//   nota: de 0 a 10 · peso: cuánto cuenta (0.5 = mitad, 1 = normal, 2 = doble)
-// La media es "ponderada": las notas que cuentan doble pesan el doble.
+// Cada nota: { id, asignatura, nombre, nota, porcentaje, examenId }
+//   nota: de 0 a 10
+//   porcentaje: cuánto cuenta en la nota final (ej: 30 = 30 %).
+//               Viene en los criterios de evaluación de cada asignatura.
+//
+// Ejemplo: examen 1 (6, cuenta 30 %) y examen 2 (8, cuenta 30 %)
+//   - Ya está decidido el 60 % de la nota y queda un 40 %.
+//   - Puntos conseguidos: 6×0,30 + 8×0,30 = 4,2 (de 10)
+//   - Para un 5 necesitas: (5 − 4,2) ÷ 0,40 = 2 de media en lo que queda.
+//
+// Las notas antiguas sin porcentaje usan "peso" (0,5 / 1 / 2) como antes.
 // =====================================================
 
 let vistaProgreso = "estudio";   // "estudio" o "notas"
-let pesoElegido = 1;
 
 function notasDe(asignatura) {
   return (estado.notas || []).filter(function (n) { return n.asignatura === asignatura; });
 }
 
-// Media ponderada: suma de (nota × peso) entre la suma de pesos
+// ¿Todas las notas de la lista tienen su porcentaje puesto?
+function usaPorcentaje(lista) {
+  return lista.length > 0 && lista.every(function (n) { return n.porcentaje > 0; });
+}
+
+// Suma de los porcentajes ya puestos
+function porcentajeUsado(lista) {
+  let total = 0;
+  for (const n of lista) total += n.porcentaje || 0;
+  return total;
+}
+
+// Media de las notas que ya tienes (ponderada: lo que cuenta más, pesa más)
 function mediaDe(lista) {
   let suma = 0, pesos = 0;
-  for (const n of lista) { suma += n.nota * n.peso; pesos += n.peso; }
+  for (const n of lista) {
+    const peso = usaPorcentaje(lista) ? n.porcentaje : (n.peso || 1);
+    suma += n.nota * peso;
+    pesos += peso;
+  }
   return pesos ? suma / pesos : 0;
 }
 
@@ -38,19 +61,34 @@ function colorNota(n) {
   return "var(--good)";
 }
 
-// ¿Qué nota necesitas en el próximo examen (que cuenta normal) para llegar al objetivo?
-//   (objetivo × (pesos + 1) − suma de nota×peso) ÷ 1
-function notaNecesaria(lista, objetivo) {
-  let suma = 0, pesos = 0;
-  for (const n of lista) { suma += n.nota * n.peso; pesos += n.peso; }
-  return objetivo * (pesos + 1) - suma;
-}
-
+// ---------- ¿Qué necesito sacar? ----------
 function textoNecesitas(lista, objetivo) {
-  const falta = notaNecesaria(lista, objetivo);
-  if (falta <= 0) return "✓ Aunque saques un 0 en el próximo, seguirías con un " + objetivo + " o más.";
-  if (falta > 10) return "😬 Con un solo examen no llegas al " + objetivo + " (necesitarías un " + formatoNota(falta) + "). Tendrás que ir subiendo en los siguientes.";
-  return "Para tener un " + objetivo + " de media necesitas un <b>" + formatoNota(falta) + "</b> en el próximo examen.";
+  if (usaPorcentaje(lista)) {
+    const usado = porcentajeUsado(lista);
+    const queda = 100 - usado;
+    // Puntos ya conseguidos sobre 10 (cada nota aporta nota × porcentaje / 100)
+    let puntos = 0;
+    for (const n of lista) puntos += n.nota * n.porcentaje / 100;
+
+    if (queda <= 0) return "Ya está todo el 100 %: tu nota final es un <b>" + formatoNota(puntos) + "</b>.";
+    const necesitas = (objetivo - puntos) / (queda / 100);
+    if (necesitas <= 0) return "✓ Ya tienes el " + objetivo + " asegurado: aunque saques un 0 en el " + queda + " % que queda, tendrías un " + formatoNota(puntos) + ".";
+    if (necesitas > 10) {
+      const maximo = puntos + 10 * queda / 100;
+      return "😬 Aunque saques un 10 en el " + queda + " % que queda, llegarías a un " + formatoNota(maximo) + ". El " + objetivo + " ya no es posible.";
+    }
+    return "Para tener un " + objetivo + " necesitas sacar de media un <b>" + formatoNota(necesitas) + "</b> en el <b>" + queda + " %</b> que queda.";
+  }
+
+  // Sin porcentajes: suponemos que el próximo examen cuenta igual que los demás
+  let suma = 0, pesos = 0;
+  for (const n of lista) { suma += n.nota * (n.peso || 1); pesos += n.peso || 1; }
+  const falta = objetivo * (pesos + 1) - suma;
+  let texto;
+  if (falta <= 0) texto = "✓ Aunque saques un 0 en el próximo, seguirías con un " + objetivo + " o más.";
+  else if (falta > 10) texto = "😬 Con un solo examen no llegas al " + objetivo + " (necesitarías un " + formatoNota(falta) + ").";
+  else texto = "Para tener un " + objetivo + " de media necesitas un <b>" + formatoNota(falta) + "</b> en el próximo examen.";
+  return texto + '<br><span class="muted">💡 Pon cuánto cuenta (%) cada nota y te lo calculo exacto. Toca una nota para cambiarla.</span>';
 }
 
 // ---------- Vista de notas (dentro de Progreso) ----------
@@ -60,12 +98,12 @@ function vistaNotasHTML() {
 
   let chips = "";
   for (const o of [5, 6, 7, 8, 9]) {
-    chips += '<button class="chip ' + (o === objetivo ? "on" : "") + '" data-act="objetivo-nota" data-o="' + o + '">' + o + '</button>';
+    chips += '<button class="chip ' + (o === objetivo ? "on" : "") + '" data-act="objetivo-nota" data-o="' + o + '">' + (o === 5 ? "5 · Aprobar" : o) + '</button>';
   }
-  let html = '<div class="card stack tight"><p class="label">Tu objetivo de media</p><div class="chips">' + chips + '</div></div>';
+  let html = '<div class="card stack tight"><p class="label">Tu objetivo</p><div class="chips">' + chips + '</div></div>';
 
   if (!asigs.length) {
-    return html + '<div class="card stack tight"><p class="vacio">Apunta las notas de tus exámenes y trabajos. Te calculo la media y lo que necesitas para llegar a tu objetivo.</p></div>' +
+    return html + '<div class="card stack tight"><p class="vacio">Apunta las notas de tus exámenes y trabajos con lo que cuenta cada una (%). Te digo qué necesitas sacar para aprobar.</p></div>' +
       '<button class="btn" data-act="nueva-nota">+ Añadir nota</button>';
   }
 
@@ -85,12 +123,24 @@ function vistaNotasHTML() {
   for (const a of asigs) {
     const lista = notasDe(a);
     const media = mediaDe(lista);
+    const usado = porcentajeUsado(lista);
+
+    // Barra con el % de la nota que ya está decidido
+    let barra = "";
+    if (usaPorcentaje(lista)) {
+      barra = '<p class="muted small">Decidido el <b>' + usado + ' %</b> de la nota · queda el ' + Math.max(0, 100 - usado) + ' %</p>' +
+        '<div class="bar"><i style="width:' + Math.min(100, usado) + '%;background:' + colorAsig(a) + '"></i></div>';
+    }
+
     html += '<div class="card stack tight">' +
       '<div class="row between"><h3 class="grow"><span class="punto-asig" style="background:' + colorAsig(a) + '"></span> ' + esc(a) + '</h3>' +
       '<span class="big-num num" style="color:' + colorNota(media) + '">' + formatoNota(media) + '</span></div>' +
+      barra +
       '<div class="list">' + lista.map(function (n) {
-        return '<div class="item nota-fila"><div class="grow"><span class="name">' + esc(n.nombre) + '</span>' +
-          (n.peso !== 1 ? '<p class="muted small">Cuenta ' + (n.peso === 2 ? "doble" : "la mitad") + '</p>' : '') + '</div>' +
+        let cuenta = "Toca para poner cuánto cuenta (%)";
+        if (n.porcentaje) cuenta = "Cuenta el " + n.porcentaje + " %";
+        return '<div class="item nota-fila"><button class="grow nota-editar" data-act="editar-nota" data-id="' + n.id + '"><span class="name">' + esc(n.nombre) + '</span>' +
+          '<span class="muted small">' + cuenta + '</span></button>' +
           '<b class="num" style="color:' + colorNota(n.nota) + '">' + formatoNota(n.nota) + '</b>' +
           '<button class="icon-btn mini" data-act="borrar-nota" data-id="' + n.id + '" aria-label="Borrar nota">×</button></div>';
       }).join("") + '</div>' +
@@ -100,35 +150,70 @@ function vistaNotasHTML() {
   return html + '<button class="btn" data-act="nueva-nota">+ Añadir nota</button>';
 }
 
-// ---------- Formulario ----------
-function hojaNota(asignatura, examen) {
-  pesoElegido = 1;
-  const nombre = examen ? "Examen" + (examen.tema ? " · " + examen.tema : "") : "";
-  const pesos = [[0.5, "La mitad"], [1, "Normal"], [2, "Doble"]].map(function (p) {
-    return '<button class="chip ' + (p[0] === 1 ? "on" : "") + '" data-act="peso-nota" data-p="' + p[0] + '">' + p[1] + '</button>';
-  }).join("");
-  abrirHoja('<div class="row between"><h2>Nueva nota</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
-    '<label class="f">Asignatura' + selectorAsig("noAsig", asignatura || "") + '</label>' +
+// ---------- Formulario (nueva nota o editar) ----------
+function hojaNota(asignatura, examen, id) {
+  const n = id ? estado.notas.find(function (x) { return x.id === id; }) : null;
+  let nombre = examen ? "Examen" + (examen.tema ? " · " + examen.tema : "") : "";
+  if (n) nombre = n.nombre;
+  const asig = n ? n.asignatura : (asignatura || "");
+
+  // Cuánto % queda libre en esa asignatura (para ayudar)
+  let ayuda = "Míralo en los criterios de evaluación (ej: exámenes 60 %, trabajos 30 %…). Si no lo sabes, déjalo vacío.";
+  if (asig) {
+    const otras = notasDe(asig).filter(function (x) { return !n || x.id !== n.id; });
+    const usado = porcentajeUsado(otras);
+    if (usado) ayuda = "En " + asig + " ya llevas un " + usado + " % puesto. Te queda un " + Math.max(0, 100 - usado) + " %.";
+  }
+
+  abrirHoja('<div class="row between"><h2>' + (n ? "Editar nota" : "Nueva nota") + '</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+    '<label class="f">Asignatura' + selectorAsig("noAsig", asig) + '</label>' +
     '<label class="f">¿De qué es?<input id="noNombre" value="' + esc(nombre) + '" placeholder="Ej: examen tema 3, trabajo, exposición..." maxlength="50"></label>' +
-    '<label class="f">Nota (de 0 a 10)<input id="noNota" inputmode="decimal" placeholder="Ej: 7,5" maxlength="5"></label>' +
-    '<div><p class="label" style="margin-bottom:8px">¿Cuánto cuenta?</p><div class="chips">' + pesos + '</div></div>' +
+    '<div class="dos"><label class="f">Nota (0 a 10)<input id="noNota" inputmode="decimal" placeholder="Ej: 7,5" maxlength="5" value="' + (n ? formatoNota(n.nota) : '') + '"></label>' +
+    '<label class="f">Cuenta (%)<input id="noPorcentaje" inputmode="decimal" placeholder="Ej: 30" maxlength="5" value="' + (n && n.porcentaje ? formatoNota(n.porcentaje) : '') + '"></label></div>' +
+    '<p class="muted small">' + esc(ayuda) + '</p>' +
     '<p class="err" id="noErr"></p>' +
-    '<button class="btn" data-act="guardar-nota" data-examen="' + (examen ? examen.id : "") + '">Guardar nota</button>');
+    '<button class="btn" data-act="guardar-nota" data-examen="' + (examen ? examen.id : "") + '" data-id="' + (n ? n.id : "") + '">' + (n ? "Guardar cambios" : "Guardar nota") + '</button>');
 }
 
-function guardarNota(examenId) {
+// Convierte lo escrito en número ("7,5" → 7.5). Si está vacío devuelve null
+function leerNumero(id) {
+  const texto = $(id).value.trim().replace(",", ".").replace("%", "");
+  if (texto === "") return null;
+  return Number(texto);
+}
+
+function guardarNota(examenId, id) {
   const asignatura = leerAsig("noAsig");
-  // Aceptamos "7,5" y "7.5"
-  const nota = Number($("noNota").value.trim().replace(",", "."));
+  const nota = leerNumero("noNota");
+  const porcentaje = leerNumero("noPorcentaje");
+
   if (!asignatura) { $("noErr").textContent = "Elige la asignatura."; return; }
-  if ($("noNota").value.trim() === "" || isNaN(nota) || nota < 0 || nota > 10) { $("noErr").textContent = "Escribe una nota entre 0 y 10."; return; }
+  if (nota === null || isNaN(nota) || nota < 0 || nota > 10) { $("noErr").textContent = "Escribe una nota entre 0 y 10."; return; }
+  if (porcentaje !== null && (isNaN(porcentaje) || porcentaje <= 0 || porcentaje > 100)) { $("noErr").textContent = "El porcentaje tiene que ser entre 1 y 100."; return; }
+
+  // Los porcentajes de una asignatura no pueden pasar del 100 %
+  if (porcentaje) {
+    const otras = notasDe(asignatura).filter(function (x) { return x.id !== id; });
+    const usado = porcentajeUsado(otras);
+    if (usado + porcentaje > 100) {
+      $("noErr").textContent = "En " + asignatura + " ya llevas un " + usado + " %. Esta nota puede contar como mucho un " + (100 - usado) + " %.";
+      return;
+    }
+  }
+
   estado.notas = estado.notas || [];
-  estado.notas.push({
-    id: nuevoId(), asignatura: asignatura, nombre: $("noNombre").value.trim() || "Nota",
-    nota: nota, peso: pesoElegido, examenId: examenId || null
-  });
+  if (id) {
+    const n = estado.notas.find(function (x) { return x.id === id; });
+    Object.assign(n, { asignatura: asignatura, nombre: $("noNombre").value.trim() || "Nota", nota: nota, porcentaje: porcentaje });
+    toast("✓ Nota cambiada");
+  } else {
+    estado.notas.push({
+      id: nuevoId(), asignatura: asignatura, nombre: $("noNombre").value.trim() || "Nota",
+      nota: nota, porcentaje: porcentaje, peso: 1, examenId: examenId || null
+    });
+    toast(nota >= 5 ? "🎉 ¡Un " + formatoNota(nota) + "! Bien hecho" : "💪 Apuntado. El próximo lo sacas");
+  }
   guardar(); cerrarHoja();
-  toast(nota >= 5 ? "🎉 ¡Un " + formatoNota(nota) + "! Bien hecho" : "💪 Apuntado. El próximo lo sacas");
   vistaProgreso = "notas";
   irA("progreso");
 }
@@ -142,17 +227,14 @@ function notaDeExamen(id) {
 const ACCIONES_NOTAS = {
   "vista-progreso": function (b) { vistaProgreso = b.dataset.v; pintarProgreso(); },
   "objetivo-nota": function (b) { estado.objetivoNota = Number(b.dataset.o); guardar(); pintarProgreso(); },
-  "nueva-nota": function (b) { hojaNota(b.dataset.asig, null); },
+  "nueva-nota": function (b) { hojaNota(b.dataset.asig, null, null); },
+  "editar-nota": function (b) { hojaNota(null, null, b.dataset.id); },
   "nota-de-examen": function (b) {
     const e = estado.examenes.find(function (x) { return x.id === b.dataset.id; });
     cerrarCapa();
-    hojaNota(e.asignatura, e);
+    hojaNota(e.asignatura, e, null);
   },
-  "peso-nota": function (b) {
-    pesoElegido = Number(b.dataset.p);
-    document.querySelectorAll('[data-act="peso-nota"]').forEach(function (c) { c.classList.toggle("on", c === b); });
-  },
-  "guardar-nota": function (b) { guardarNota(b.dataset.examen); },
+  "guardar-nota": function (b) { guardarNota(b.dataset.examen, b.dataset.id); },
   "borrar-nota": function (b) {
     if (!confirm("¿Borrar esta nota?")) return;
     estado.notas = estado.notas.filter(function (n) { return n.id !== b.dataset.id; });
