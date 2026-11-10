@@ -309,7 +309,14 @@ const ACCIONES_PLANIFICADOR = {
   },
   "repasar-ya": function () { cerrarCapa(); empezarRepaso(""); },
   "ir-estudiar": function () { cerrarCapa(); irA("estudiar"); },
-  "periodo-asig": function (b) { periodoAsig = Number(b.dataset.p); pintarProgreso(); }
+  "periodo-asig": function (b) { periodoAsig = Number(b.dataset.p); pintarProgreso(); },
+  "info-protector": function () {
+    mostrarCapa('<div class="msg">' + apixSVG("anima", "lg") + '<p class="label">Racha</p><h1>Protector 🛡️</h1>' +
+      '<p>Todos tenemos un mal día. <b>Una vez por semana</b> (de lunes a domingo), si un día no estudias, no pierdes la racha.</p>' +
+      '<p class="muted">Solo salva días sueltos: si fallas dos días seguidos, la racha se pierde. El día salvado no suma, pero tampoco resta.</p>' +
+      '<p><b>' + (protectorDisponible() ? "Esta semana aún te queda." : "Esta semana ya lo has usado.") + '</b></p>' +
+      '<button class="btn" data-act="cerrar-capa">Entendido</button></div>');
+  }
 };
 
 // Cambiar la hora en la ventana del plan

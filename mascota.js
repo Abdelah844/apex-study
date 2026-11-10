@@ -99,6 +99,14 @@ function estadoMascota() {
     };
   }
 
+  // 4c-bis. El protector salvó la racha ayer y hoy aún no has estudiado
+  if (minutosDelDia(hoy()) === 0 && diasSalvados().includes(sumarDias(hoy(), -1))) {
+    return {
+      humor: "anima", mensaje: "Ayer no estudiaste, pero el protector 🛡️ ha salvado tu racha de " + rachaActual() + " días. Hoy toca estudiar, que mañana ya no te salva.",
+      boton: '<button class="btn auto" data-act="ir" data-tab="estudiar">Estudiar ahora</button>'
+    };
+  }
+
   // 4d. Tarjetas que tocan hoy
   const tarjetasHoy = tarjetasParaHoy(null).length;
   if (tarjetasHoy) {

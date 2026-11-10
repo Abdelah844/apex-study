@@ -81,10 +81,13 @@ function pintarInicio() {
   const lunes = sumarDias(hoy(), -((new Date().getDay() + 6) % 7));
   let semana = "";
   const letras = ["L", "M", "X", "J", "V", "S", "D"];
+  const salvados = diasSalvados();   // días que salvó el protector 🛡️
   for (let i = 0; i < 7; i++) {
     const dia = sumarDias(lunes, i);
-    const clase = (minutosDelDia(dia) > 0 ? "on " : "") + (dia === hoy() ? "today" : "");
-    semana += '<div>' + letras[i] + '<i class="' + clase + '">' + (minutosDelDia(dia) > 0 ? "✓" : "") + '</i></div>';
+    const estudiado = minutosDelDia(dia) > 0;
+    const salvado = salvados.includes(dia);
+    const clase = (estudiado ? "on " : "") + (salvado ? "salvado " : "") + (dia === hoy() ? "today" : "");
+    semana += '<div>' + letras[i] + '<i class="' + clase + '">' + (estudiado ? "✓" : salvado ? "🛡️" : "") + '</i></div>';
   }
 
   const examenes = proximosExamenes().slice(0, 3);
@@ -100,6 +103,7 @@ function pintarInicio() {
         '<div><p class="label">Exámenes</p><p class="big-num num">' + proximosExamenes().length + '</p><p class="muted small">por hacer</p></div>' +
       '</div>' +
       '<div class="week" style="margin-top:8px">' + semana + '</div>' +
+      '<button class="btn-txt protector" data-act="info-protector">' + (protectorDisponible() ? "🛡️ Protector de racha: te queda 1 esta semana" : "🛡️ Protector de racha: ya usado esta semana") + '</button>' +
       '<button class="btn" data-act="ir" data-tab="estudiar" style="margin-top:10px">Empezar a estudiar</button>' +
       '<button class="btn-sec full" data-act="que-estudio">🤔 ¿Qué estudio hoy?</button>' +
     '</div>' +
@@ -272,7 +276,7 @@ function pintarProgreso() {
   $("app").innerHTML = '<div class="stack">' +
     cabecera("Progreso", "Tu constancia") + seg +
     '<div class="grid3">' +
-      '<div class="card"><p class="label">Racha</p><p class="big-num num">' + rachaActual() + '</p><p class="muted small">mejor: ' + estado.mejorRacha + '</p></div>' +
+      '<div class="card"><p class="label">Racha</p><p class="big-num num">' + rachaActual() + '</p><p class="muted small">mejor: ' + estado.mejorRacha + ' · 🛡️ ' + (protectorDisponible() ? "1" : "0") + '</p></div>' +
       '<div class="card"><p class="label">Total</p><p class="big-num num">' + (total / 60).toFixed(1).replace(".", ",") + '</p><p class="muted small">horas</p></div>' +
       '<div class="card"><p class="label">Palabra</p><p class="big-num num">' + cumplidos + '/' + vencidos + '</p><p class="muted small">planes cumplidos</p></div>' +
     '</div>' +

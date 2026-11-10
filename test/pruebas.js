@@ -52,14 +52,53 @@ prueba("Racha", "si hoy aún no estudiaste, cuenta desde ayer", function () {
   sesionHace(1); sesionHace(2);
   igual(rachaActual(), 2);
 });
-prueba("Racha", "un día sin estudiar corta la racha", function () {
-  sesionHace(0); sesionHace(2); sesionHace(3);
+prueba("Racha", "dos días seguidos sin estudiar cortan la racha", function () {
+  sesionHace(0); sesionHace(3); sesionHace(4);
   igual(rachaActual(), 1);
 });
-prueba("Racha", "racha perdida: estudiabas y ayer y hoy no", function () {
-  sesionHace(2); sesionHace(3); sesionHace(4);
+prueba("Racha", "racha perdida: estudiabas y llevas 2 días sin estudiar", function () {
+  sesionHace(3); sesionHace(4); sesionHace(5);
+  igual(rachaActual(), 0);
   igual(rachaPerdida(), 3);
 });
+
+// ---------- PROTECTOR DE RACHA ----------
+// Fechas fijas para no depender del día de hoy: usamos calcularRacha(fecha)
+function estudio(fechas) { for (const f of fechas) estado.sesiones.push({ fecha: f, hora: "18:00", min: 25, objetivo: "x", asignatura: "" }); }
+prueba("Protector", "lunesDe da el lunes de cada semana", function () {
+  igual(lunesDe("2026-11-10"), "2026-11-09", "martes");
+  igual(lunesDe("2026-11-15"), "2026-11-09", "domingo");
+  igual(lunesDe("2026-11-16"), "2026-11-16", "lunes");
+});
+prueba("Protector", "un día suelto sin estudiar no rompe la racha (y no suma)", function () {
+  estudio(["2026-11-10", "2026-11-11", "2026-11-13"]);   // falta el jueves 12
+  const r = calcularRacha("2026-11-13");
+  igual(r.dias, 3);
+  igual(r.salvados, ["2026-11-12"]);
+});
+prueba("Protector", "solo salva un día por semana", function () {
+  estudio(["2026-11-09", "2026-11-11", "2026-11-13"]);   // faltan martes 10 y jueves 12
+  const r = calcularRacha("2026-11-13");
+  igual(r.dias, 2, "salva el jueves, pero el martes ya no");
+});
+prueba("Protector", "en semanas distintas salva uno en cada una", function () {
+  estudio(["2026-11-06", "2026-11-08", "2026-11-09", "2026-11-11"]);   // faltan sáb 7 y mar 10
+  igual(calcularRacha("2026-11-11").dias, 4);
+});
+prueba("Protector", "no salva dos días seguidos aunque sean de semanas distintas", function () {
+  estudio(["2026-11-14", "2026-11-17"]);   // faltan domingo 15 y lunes 16
+  igual(calcularRacha("2026-11-17").dias, 1);
+});
+prueba("Protector", "si ayer no estudiaste, hoy aún puedes salvar la racha", function () {
+  sesionHace(2); sesionHace(3);
+  igual(rachaActual(), 2);
+  igual(diasSalvados(), [sumarDias(hoy(), -1)]);
+});
+prueba("Protector", "con la racha a 0 no se gasta el protector", function () {
+  igual(rachaActual(), 0);
+  cierto(protectorDisponible());
+});
+
 prueba("Racha", "minutosDelDia suma todas las sesiones del día", function () {
   sesionHace(0, 25); sesionHace(0, 45); sesionHace(1, 60);
   igual(minutosDelDia(hoy()), 70);

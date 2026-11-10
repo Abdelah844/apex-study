@@ -114,21 +114,65 @@ function minutosDelDia(iso) {
   return total;
 }
 
-// Días seguidos estudiando (cuenta hoy o, si hoy aún no, desde ayer)
-function rachaActual() {
-  let dia = hoy();
-  if (minutosDelDia(dia) === 0) dia = sumarDias(dia, -1);
-  let n = 0;
-  while (minutosDelDia(dia) > 0) { n++; dia = sumarDias(dia, -1); }
-  return n;
+// ---------- RACHA CON PROTECTOR 🛡️ ----------
+// Una vez por semana (de lunes a domingo), si un día no estudias, no pierdes la racha.
+// Reglas: solo salva días sueltos (el día de antes sí estudiaste) y uno por semana.
+// El día salvado no suma a la racha, pero tampoco la rompe.
+
+// Lunes de la semana de esa fecha
+function lunesDe(fecha) {
+  const diaSemana = new Date(fecha + "T12:00:00").getDay();   // 0 = domingo
+  return sumarDias(fecha, -((diaSemana + 6) % 7));
 }
 
-// Si ayer no estudiaste ni hoy tampoco: ¿cuántos días seguidos tenías antes?
+// Cuenta la racha hacia atrás empezando en "dia".
+// Devuelve los días estudiados y los días que salvó el protector.
+function calcularRacha(dia) {
+  let dias = 0;
+  const salvados = [];
+  const semanasUsadas = [];
+  while (true) {
+    if (minutosDelDia(dia) > 0) { dias++; dia = sumarDias(dia, -1); continue; }
+    // Día sin estudiar: ¿lo salva el protector?
+    const antes = sumarDias(dia, -1);
+    const semana = lunesDe(dia);
+    if (minutosDelDia(antes) > 0 && !semanasUsadas.includes(semana)) {
+      semanasUsadas.push(semana);
+      salvados.push(dia);
+      dia = antes;
+      continue;
+    }
+    break;   // dos días seguidos sin estudiar, o ya usaste el protector esa semana
+  }
+  return { dias: dias, salvados: salvados };
+}
+
+// Si hoy aún no has estudiado, la racha se cuenta desde ayer
+function inicioRacha() {
+  return minutosDelDia(hoy()) > 0 ? hoy() : sumarDias(hoy(), -1);
+}
+
+// Días seguidos estudiando
+function rachaActual() {
+  return calcularRacha(inicioRacha()).dias;
+}
+
+// Días que el protector ha salvado en la racha actual
+function diasSalvados() {
+  const r = calcularRacha(inicioRacha());
+  return r.dias ? r.salvados : [];
+}
+
+// ¿Te queda el protector de esta semana?
+function protectorDisponible() {
+  const lunes = lunesDe(hoy());
+  return !diasSalvados().some(function (d) { return d >= lunes; });
+}
+
+// Si has perdido la racha: ¿cuántos días seguidos tenías antes?
 function rachaPerdida() {
-  if (minutosDelDia(hoy()) > 0 || minutosDelDia(sumarDias(hoy(), -1)) > 0) return 0;
-  let dia = sumarDias(hoy(), -2), n = 0;
-  while (minutosDelDia(dia) > 0) { n++; dia = sumarDias(dia, -1); }
-  return n;
+  if (rachaActual() > 0) return 0;
+  return calcularRacha(sumarDias(hoy(), -2)).dias;
 }
 
 function proximosExamenes() {
