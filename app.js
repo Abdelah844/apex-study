@@ -1045,7 +1045,25 @@ function avisoPalabra(p) {
 // en Supabase, y Supabase lo envía a la hora exacta (notificación push).
 const SUPABASE_URL = "https://bwgukadlvyhogwtszlhl.supabase.co";
 const SUPABASE_CLAVE = "sb_publishable_-rnOK3rj54mx7h4s0-L_yA_rgrhU6SU";   // clave pública (es normal que esté aquí)
-const VAPID_PUBLICA = "BEN_7_TDiIF6EdGLyNOw0OoKiYQfpkwmm0SsfKDIMaZ28kmgIqpmMYTF2-_S_7Jc9iVyLmO97pk4NA__y7fbMJA";   // clave pública de avisos
+// Función de Supabase que envía los avisos (la de Apex Study, distinta de la de Apex Gym)
+const FUNCION_AVISOS = SUPABASE_URL + "/functions/v1/study-enviar-avisos";
+
+// Clave pública de avisos: se la pedimos a la función y la guardamos en el móvil
+async function clavePublicaAvisos() {
+  try {
+    const guardada = localStorage.getItem("apex-study-vapid");
+    if (guardada) return guardada;
+  } catch (e) { /* seguimos */ }
+  const r = await fetch(FUNCION_AVISOS + "?clave=1");
+  const datos = await r.json();
+  try { localStorage.setItem("apex-study-vapid", datos.publica); } catch (e) { /* no pasa nada */ }
+  return datos.publica;
+}
+
+// Pasa los bytes de una clave a texto (para comparar claves)
+function bytesEnTexto(buffer) {
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
 
 // Llama a una función de Supabase (las del archivo supabase/1-tabla-avisos.sql)
 function llamarSupabase(funcion, datos) {
@@ -1116,9 +1134,15 @@ function claveEnBytes(texto) {
 // "Dirección" de este móvil para recibir avisos (se crea la primera vez)
 async function suscripcionPush() {
   if (permisoAvisos() !== "granted" || !("serviceWorker" in navigator) || !("PushManager" in window)) return null;
+  const clave = await clavePublicaAvisos();
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
-  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveEnBytes(VAPID_PUBLICA) });
+  // Si el móvil estaba apuntado con otra clave (la antigua), lo desapuntamos y lo apuntamos de nuevo
+  if (sub && sub.options && sub.options.applicationServerKey && bytesEnTexto(sub.options.applicationServerKey) !== clave) {
+    await sub.unsubscribe();
+    sub = null;
+  }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveEnBytes(clave) });
   return sub.toJSON();
 }
 
@@ -1473,9 +1497,11 @@ if ("serviceWorker" in navigator) {
   // Por si cambió la suscripción del móvil, volvemos a guardar los avisos pendientes.
   // Solo una vez cada 12 horas (antes se hacía siempre y con mala cobertura se atascaba)
   navigator.serviceWorker.ready.then(function () {
-    const ultima = Number(localStorage.getItem("apex-study-sync") || 0);
+    // "sync2": con la función nueva de avisos hay que volver a guardarlos todos una vez
+    const ultima = Number(localStorage.getItem("apex-study-sync2") || 0);
     if (Date.now() - ultima < 12 * 3600000) return;
-    localStorage.setItem("apex-study-sync", String(Date.now()));
+    if (!ultima) estado.syncHorario = 0;   // también el horario
+    localStorage.setItem("apex-study-sync2", String(Date.now()));
     setTimeout(programarTodosNube, 3000);   // un poco después de abrir, para no frenar el arranque
   }).catch(function () {});
 
