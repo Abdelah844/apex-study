@@ -6,7 +6,7 @@
 // Si cambias algún archivo, sube el número de VERSION.
 // =====================================================
 
-const VERSION = "apex-study-2.4.0";
+const VERSION = "apex-study-2.4.1";
 
 const ARCHIVOS = [
   "./", "./index.html", "./manifest.json", "./app.js", "./mascota.js", "./horario.js", "./deberes.js", "./notas.js", "./tarjetas.js", "./sonidos.js", "./bienvenida.js", "./calendario-movil.js",
