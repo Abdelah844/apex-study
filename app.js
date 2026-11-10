@@ -732,10 +732,6 @@ function hojaAjustes() {
         }).join("") +
       '</div><p class="muted small">Automático usa el mismo modo que tu móvil.</p></div>' +
     tarjetaRecordatorios() +
-    '<div class="card stack tight"><h3>Calendario del móvil y widget</h3>' +
-      '<p class="muted small">El móvil no deja que una web tenga widget, pero su Calendario sí. Añade allí tus exámenes, deberes, planes y horario (con alarmas que suenan aunque Apex Study esté cerrada) y pon el widget del Calendario en tu pantalla de inicio.</p>' +
-      '<button class="btn-sec full" data-act="exportar-calendario">📲 Añadir al calendario del móvil</button>' +
-      '<p class="muted small">Si cambias algo, vuelve a pulsarlo para actualizarlo.</p></div>' +
     '<div class="card stack tight"><h3>Avisos</h3><p class="muted small">Apix te avisará cuando llegue la hora de empezar a estudiar.</p>' + avisos + '</div>' +
     // Cómo instalarla: solo sale si aún la usas desde el navegador
     (appInstalada() ? '' : '<div class="card stack tight"><h3>Instalar en el móvil</h3>' +
@@ -1318,7 +1314,6 @@ const ACCIONES = {
   "cerrar-hoja": function () { cerrarHoja(); },
   "tema": function (b) { ponerTema(b.dataset.tema); hojaAjustes(); },
   "exportar": function () { exportarDatos(); },
-  "exportar-calendario": function () { exportarCalendario(); },
   "cambiar-aviso": function (b) {
     const clave = b.dataset.clave;
     const cambio = {};
