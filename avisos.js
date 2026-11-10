@@ -101,7 +101,7 @@ function llamarSupabase(funcion, datos) {
 // =====================================================
 // DIAGNÓSTICO DE AVISOS
 // Comprueba paso a paso si los avisos con la app cerrada pueden funcionar
-// y programa uno de prueba para dentro de 2 minutos.
+// y programa uno de prueba para dentro de 1 minuto.
 // =====================================================
 async function diagnosticoAvisos() {
   const pasos = [];
@@ -130,13 +130,14 @@ async function diagnosticoAvisos() {
   }
 
   try {
-    const cuando = new Date(Date.now() + 2 * 60000);
+    const cuando = new Date(Date.now() + 60000);   // 1 minuto: tiempo para cerrar la app
     await llamarSupabase("study_programar_aviso", {
       p_endpoint: sub.endpoint, p_suscripcion: sub, p_plan: "prueba",
       p_cuando: cuando.toISOString(), p_titulo: "Apix 🔔", p_cuerpo: "¡Si ves esto con la app cerrada, los avisos funcionan!"
     });
     paso(true, "Aviso de prueba guardado en Supabase para las " + cuando.toTimeString().slice(0, 5));
-    paso(true, "Ahora CIERRA la app del todo y espera 2 minutos.");
+    paso(true, "Ahora CIERRA la app del todo. Llegará en 1 o 2 minutos.");
+    if (esIphone) paso(true, "Si tienes el ahorro de batería activado, puede tardar un poco más.");
   } catch (e) {
     paso(false, "No se pudo guardar en Supabase → " + e.message);
   }
