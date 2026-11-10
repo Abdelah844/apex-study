@@ -435,6 +435,71 @@ prueba("Por asignatura", "avisa de asignaturas con examen cerca que no has tocad
   igual(asignaturasOlvidadas(hoy()).map(function (o) { return o.asignatura; }), ["Física"]);
 });
 
+
+// ---------- RANGOS Y XP ----------
+function sesionDia(fecha, min, salidas) { estado.sesiones.push({ fecha: fecha, hora: "18:00", min: min, objetivo: "x", asignatura: "", distracciones: salidas || 0 }); }
+prueba("Rangos", "1 XP por minuto y +10 si no sales de la app", function () {
+  sesionDia("2026-11-10", 45, 0);
+  sesionDia("2026-11-10", 30, 2);
+  igual(xpPorDia(), [{ fecha: "2026-11-10", xp: 85 }]);
+});
+prueba("Rangos", "+20 por cada plan cumplido y +1 por tarjeta", function () {
+  sesionDia("2026-11-10", 25, 1);
+  estado.planes = [{ id: "p", fecha: "2026-11-10", hecho: true }, { id: "q", fecha: "2026-11-10", hecho: false }];
+  estado.repasos = { "2026-11-10": 12 };
+  igual(xpTotal(), 25 + 20 + 12);
+});
+prueba("Rangos", "como mucho 300 XP al día", function () {
+  sesionDia("2026-11-10", 500, 0);
+  sesionDia("2026-11-11", 50, 1);
+  igual(xpTotal(), 350);
+});
+prueba("Rangos", "bonus al llegar a 7 días de racha", function () {
+  for (let i = 1; i <= 7; i++) sesionDia("2026-11-0" + i, 10, 1);
+  igual(bonusRacha(), [{ fecha: "2026-11-07", xp: 50 }]);
+  igual(xpTotal(), 70 + 50);
+});
+prueba("Rangos", "hay 19 escalones: 6 rangos con 3 divisiones y Apex", function () {
+  const e = escalones();
+  igual(e.length, 19);
+  igual([e[0].xp, e[1].xp, e[2].xp, e[3].xp], [0, 100, 200, 300]);
+  igual(e[18].xp, 18000);
+});
+prueba("Rangos", "nombre y división según la XP", function () {
+  igual(rangoDe(0).nombre, "Bronce III");
+  igual(rangoDe(150).nombre, "Bronce II");
+  igual(rangoDe(299).nombre, "Bronce I");
+  igual(rangoDe(300).nombre, "Plata III");
+  igual(rangoDe(1400).nombre, "Oro II");
+  igual(rangoDe(25000).nombre, "Apex");
+});
+prueba("Rangos", "cuánto falta y la barra", function () {
+  const r = rangoDe(150);
+  igual([r.siguiente, r.falta, r.porcentaje], ["Bronce I", 50, 50]);
+  igual(rangoDe(18000).falta, 0, "en Apex no falta nada");
+});
+prueba("Rangos", "con nombres de estudio", function () {
+  estado.estiloRangos = "estudio";
+  igual(rangoDe(0).nombre, "Novato III");
+  igual(rangoDe(1000).nombre, "Estudiante III");
+  igual(rangoDe(18000).nombre, "Apex");
+});
+prueba("Rangos", "historial: el día en que conseguiste cada rango", function () {
+  sesionDia("2026-11-01", 200, 1);
+  sesionDia("2026-11-02", 200, 1);   // aquí pasas de 300: Plata
+  igual(historialRangos(), [{ rango: 0, fecha: null }, { rango: 1, fecha: "2026-11-02" }]);
+});
+prueba("Rangos", "detecta cuando subes (y solo una vez)", function () {
+  estado.rangoVisto = 0;
+  sesionDia("2026-11-10", 120, 1);
+  igual(comprobarSubida(), "🥉 ¡Subes a Bronce II!");
+  igual(comprobarSubida(), "");
+});
+prueba("Rangos", "numeroBonito pone el punto de miles", function () {
+  igual(numeroBonito(18000), "18.000");
+  igual(numeroBonito(950), "950");
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

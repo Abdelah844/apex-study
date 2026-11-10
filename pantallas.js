@@ -25,7 +25,8 @@ function cabecera(titulo, sub) {
 
 // Tarjeta de Apix con su bocadillo
 function tarjetaApix(humor, titulo, mensaje, botones) {
-  return '<div class="apix-card tono-' + humor + '">' + apixSVG(humor) +
+  return '<div class="apix-card tono-' + humor + '"><div class="apix-con-medalla">' + apixSVG(humor) +
+    '<span class="medalla" aria-label="Tu rango">' + miRango().icono + '</span></div>' +
     '<div class="bocadillo"><p class="label">' + titulo + '</p><p>' + esc(mensaje) + '</p>' +
     (botones ? '<div class="acciones">' + botones + '</div>' : '') + '</div></div>';
 }
@@ -102,6 +103,7 @@ function pintarInicio() {
         '<div><p class="label">Hoy</p><p class="big-num num">' + minutosDelDia(hoy()) + '</p><p class="muted small">minutos</p></div>' +
         '<div><p class="label">Exámenes</p><p class="big-num num">' + proximosExamenes().length + '</p><p class="muted small">por hacer</p></div>' +
       '</div>' +
+      bloqueRango() +   // rangos.js
       '<div class="week" style="margin-top:8px">' + semana + '</div>' +
       '<button class="btn-txt protector" data-act="info-protector">' + (protectorDisponible() ? "🛡️ Protector de racha: te queda 1 esta semana" : "🛡️ Protector de racha: ya usado esta semana") + '</button>' +
       '<button class="btn" data-act="ir" data-tab="estudiar" style="margin-top:10px">Empezar a estudiar</button>' +
@@ -275,6 +277,7 @@ function pintarProgreso() {
 
   $("app").innerHTML = '<div class="stack">' +
     cabecera("Progreso", "Tu constancia") + seg +
+    '<div class="card">' + bloqueRango() + '</div>' +
     '<div class="grid3">' +
       '<div class="card"><p class="label">Racha</p><p class="big-num num">' + rachaActual() + '</p><p class="muted small">mejor: ' + estado.mejorRacha + ' · 🛡️ ' + (protectorDisponible() ? "1" : "0") + '</p></div>' +
       '<div class="card"><p class="label">Total</p><p class="big-num num">' + (total / 60).toFixed(1).replace(".", ",") + '</p><p class="muted small">horas</p></div>' +

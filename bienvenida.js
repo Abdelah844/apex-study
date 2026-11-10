@@ -125,6 +125,7 @@ const ACCIONES_BIENVENIDA = {
   },
   "bienvenida-fin": function (b) {
     estado.bienvenidaVista = true;
+    estado.rangoVisto = 0;   // empieza en Bronce III; el bloque de Inicio ya lo enseña
     guardar();
     cerrarCapa();
     confeti();

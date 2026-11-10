@@ -75,6 +75,7 @@ function actualizarFoco() {
 function terminarSesion() {
   clearInterval(relojFoco);
   const s = estado.sesionActual;
+  const xpAntes = xpTotal();
   estado.sesiones.push({ fecha: hoy(), hora: horaActual(), min: s.min, objetivo: s.objetivo, asignatura: s.asignatura, distracciones: s.distracciones });
 
   // El plan queda cumplido: el de esta sesión, o el primero pendiente de hoy
@@ -94,9 +95,13 @@ function terminarSesion() {
 
   let extra = s.distracciones ? "Saliste " + s.distracciones + (s.distracciones === 1 ? " vez" : " veces") + ". La próxima, a por 0." : "¡Sin salir ni una vez! Eres una máquina.";
   if (plan) extra = "Has cumplido tu palabra. " + extra;
+  const xpGanada = xpTotal() - xpAntes;
+  const subida = comprobarSubida();   // "¡Subes a Oro I!" o ""
   mostrarCapa('<div class="msg">' + apixSVG("campeon", "xl") + '<p class="label">Sesión completada</p><h1>¡Objetivo cumplido!</h1>' +
     '<p><b>' + s.min + ' min</b> de «' + esc(s.objetivo) + '»</p><p class="muted">' + extra + '</p>' +
     '<p class="big-num">🔥 ' + rachaActual() + ' ' + (rachaActual() === 1 ? "día" : "días") + '</p>' +
+    '<p><span class="pill ok">+' + xpGanada + ' XP</span>' + (xpGanada === 0 ? ' <span class="muted small">(ya llegaste al máximo de hoy)</span>' : '') + '</p>' +
+    (subida ? '<p class="subida">' + subida + '</p>' : '') +
     botonesDescanso(s) + '</div>');
 }
 

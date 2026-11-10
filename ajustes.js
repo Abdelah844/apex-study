@@ -141,6 +141,7 @@ function hojaAjustes() {
   abrirHoja('<div class="row between"><h2>Ajustes</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
     '<div class="card stack tight"><h3>Tu nombre</h3><input id="ajNombre" data-cambio="nombre" maxlength="20" placeholder="¿Cómo te llamas?" value="' + esc(estado.nombre || "") + '"></div>' +
     '<div class="card stack tight"><h3>¿Qué estudias?</h3><div class="seg">' + niveles + '</div></div>' +
+    '<div class="card stack tight"><h3>Nombres de los rangos</h3><div class="seg">' + botonesEstilo() + '</div></div>' +
     '<div class="card stack tight"><h3>Mis asignaturas</h3>' +
       '<p class="muted small">' + ayuda + '</p>' +
       (listaMias ? '<div class="list">' + listaMias + '</div>' : '') +

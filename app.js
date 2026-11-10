@@ -163,7 +163,7 @@ const ACCIONES = {
 };
 
 // Añadimos los botones del horario semanal (están en horario.js)
-Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS, ACCIONES_TARJETAS, ACCIONES_SONIDOS, ACCIONES_BIENVENIDA, ACCIONES_PLANIFICADOR);
+Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS, ACCIONES_TARJETAS, ACCIONES_SONIDOS, ACCIONES_BIENVENIDA, ACCIONES_PLANIFICADOR, ACCIONES_RANGOS);
 
 // Un solo "escuchador" para todos los clics de la app
 document.addEventListener("click", function (ev) {
@@ -183,6 +183,7 @@ pintar();
 if (estado.sesionActual) abrirFoco();
 else if (estado.descanso) abrirDescanso();
 else if (!estado.bienvenidaVista) abrirBienvenida();   // primera vez: Apix se presenta
+else if (estado.rangoVisto === undefined) setTimeout(presentarRangos, 1200);   // novedad: rangos (una sola vez)
 else setTimeout(recordarCopia, 2500);                  // una vez al mes: "¿hacemos una copia?"
 
 // Resumen del domingo: lo actualizamos una vez al día (con los exámenes y deberes nuevos)

@@ -22,7 +22,7 @@ vm.createContext(contexto);
 
 const raiz = path.join(__dirname, "..");
 // Solo los archivos de lógica (los de pantallas necesitan navegador)
-const LOGICA = ["datos.js", "mascota.js", "horario.js", "deberes.js", "notas.js", "tarjetas.js", "avisos.js", "planificador.js"];
+const LOGICA = ["datos.js", "mascota.js", "horario.js", "deberes.js", "notas.js", "tarjetas.js", "avisos.js", "rangos.js", "planificador.js"];
 for (const archivo of LOGICA.concat(["test/pruebas.js"])) {
   vm.runInContext(fs.readFileSync(path.join(raiz, archivo), "utf8"), contexto, { filename: archivo });
 }

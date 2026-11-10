@@ -190,6 +190,7 @@ function responderTarjeta(r) {
   const t = estado.tarjetas.find(function (x) { return x.id === repaso.cola[0]; });
   repaso.cola.shift();
   aplicarRespuesta(t, r, hoy());
+  contarRepaso();   // +1 XP (rangos.js)
 
   if (r === "si") {
     repaso.hechas++;
@@ -222,9 +223,11 @@ function terminarRepaso() {
   cerrarFoco();
   confeti();
   const unicas = r.total - r.falladas;   // tarjetas distintas que has repasado
+  const subida = comprobarSubida();
   mostrarCapa('<div class="msg">' + apixSVG("campeon", "xl") + '<p class="label">Repaso terminado</p><h1>¡Bien hecho!</h1>' +
     '<p>Te sabías <b>' + r.sabidas + ' de ' + unicas + '</b> a la primera' + (minutos >= 1 ? ' · ' + minutos + ' min' : '') + '.</p>' +
     '<p class="muted">' + (r.falladas ? "Las que fallaste te las volveré a preguntar pronto." : "¡Ni un fallo! Esas tardarán más en volver a salir.") + '</p>' +
+    (subida ? '<p class="subida">' + subida + '</p>' : '') +
     '<button class="btn" data-act="cerrar-capa">¡Genial!</button></div>');
 }
 
