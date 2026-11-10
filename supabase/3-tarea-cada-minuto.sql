@@ -1,7 +1,7 @@
 -- =====================================================
 -- APEX STUDY · TAREA CADA MINUTO (paso 3)
 -- Pega esto en Supabase → SQL Editor → Run, DESPUÉS de crear la función.
--- Cambia PON_AQUI_TU_CRON_SECRET por tu contraseña (la misma que el secreto CRON_SECRET).
+-- Cambia PON_AQUI_TU_CRON_SECRET por tu contraseña (la misma que el secreto STUDY_CRON_SECRET).
 -- =====================================================
 
 -- pg_cron: ejecuta cosas cada cierto tiempo. pg_net: permite llamar a una URL desde la base de datos.
@@ -17,7 +17,7 @@ select cron.schedule(
   '* * * * *',
   $$
   select net.http_post(
-    url := 'https://bwgukadlvyhogwtszlhl.supabase.co/functions/v1/enviar-avisos',
+    url := 'https://bwgukadlvyhogwtszlhl.supabase.co/functions/v1/study-enviar-avisos',
     headers := '{"Content-Type": "application/json", "x-cron-secret": "PON_AQUI_TU_CRON_SECRET"}'::jsonb,
     body := '{}'::jsonb
   );

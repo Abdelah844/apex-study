@@ -1,9 +1,12 @@
 // =====================================================
-// APEX STUDY · FUNCIÓN "enviar-avisos" (paso 2)
+// APEX STUDY · FUNCIÓN "study-enviar-avisos" (paso 2)
+// OJO: tiene un nombre distinto a la de Apex Gym ("enviar-avisos"),
+// porque las dos apps comparten el mismo proyecto de Supabase.
 // Va en Supabase → Edge Functions. Se ejecuta cada minuto (lo programa el paso 3).
 // Busca los avisos cuya hora ya ha llegado y los envía a los móviles.
 // Necesita estos secretos (Edge Functions → Secrets):
-//   VAPID_PUBLICA, VAPID_PRIVADA, VAPID_CONTACTO, CRON_SECRET
+//   STUDY_VAPID_PUBLICA, STUDY_VAPID_PRIVADA, STUDY_CRON_SECRET
+// (con "STUDY_" delante para no mezclarse con los secretos de Apex Gym)
 // =====================================================
 
 import webpush from "npm:web-push@3.6.7";
@@ -27,14 +30,14 @@ const supabase = createClient(Deno.env.get("SUPABASE_URL")!, claveServidor());
 
 // Las claves VAPID demuestran que el aviso lo manda tu app y no otra
 webpush.setVapidDetails(
-  Deno.env.get("VAPID_CONTACTO")!,
-  Deno.env.get("VAPID_PUBLICA")!,
-  Deno.env.get("VAPID_PRIVADA")!,
+  "mailto:apexgymscx@gmail.com",
+  Deno.env.get("STUDY_VAPID_PUBLICA")!,
+  Deno.env.get("STUDY_VAPID_PRIVADA")!,
 );
 
 Deno.serve(async (req) => {
   // Solo la tarea programada (que conoce la contraseña) puede ejecutar esta función
-  if (req.headers.get("x-cron-secret") !== Deno.env.get("CRON_SECRET")) {
+  if (req.headers.get("x-cron-secret") !== Deno.env.get("STUDY_CRON_SECRET")) {
     return new Response("No autorizado", { status: 401 });
   }
 
