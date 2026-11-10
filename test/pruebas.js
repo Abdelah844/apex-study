@@ -286,6 +286,116 @@ prueba("Apix", "te recuerda los deberes de mañana", function () {
   cierto(estadoMascota().mensaje.includes("Redacción"));
 });
 
+
+// ---------- PLAN AUTOMÁTICO DE EXAMEN ----------
+const EXAMEN = { id: "ex1", asignatura: "Matemáticas", tema: "Ecuaciones", fecha: "2026-11-30", hora: "" };
+prueba("Plan de examen", "con tiempo de sobra propone 5 sesiones (10, 7, 4, 2 y 1 día antes)", function () {
+  const s = propuestaPlanExamen(EXAMEN, "2026-11-10", "18:00", "09:00");
+  igual(s.map(function (x) { return x.fecha; }), ["2026-11-20", "2026-11-23", "2026-11-26", "2026-11-28", "2026-11-29"]);
+});
+prueba("Plan de examen", "la primera es para empezar y la última es el repaso final", function () {
+  const s = propuestaPlanExamen(EXAMEN, "2026-11-10", "18:00", "09:00");
+  igual(s[0].objetivo, "Estudiar Ecuaciones");
+  igual(s[2].objetivo, "Repasar Ecuaciones");
+  igual(s[4].objetivo, "Repaso final de Ecuaciones");
+});
+prueba("Plan de examen", "con el examen en 3 días solo propone los días que quedan", function () {
+  const s = propuestaPlanExamen(EXAMEN, "2026-11-27", "18:00", "09:00");
+  igual(s.map(function (x) { return x.antes; }), [2, 1]);
+});
+prueba("Plan de examen", "no propone hoy si la hora ya ha pasado", function () {
+  igual(propuestaPlanExamen(EXAMEN, "2026-11-28", "18:00", "09:00").length, 2, "por la mañana: hoy y mañana");
+  igual(propuestaPlanExamen(EXAMEN, "2026-11-28", "18:00", "19:30").length, 1, "por la noche: solo mañana");
+});
+prueba("Plan de examen", "si el examen es hoy, no propone nada", function () {
+  igual(propuestaPlanExamen(EXAMEN, "2026-11-30", "18:00", "09:00").length, 0);
+});
+prueba("Plan de examen", "no repite días que ya tienen plan de ese examen", function () {
+  estado.planes = [{ id: "p", examenId: "ex1", fecha: "2026-11-29", hora: "18:00", hecho: false }];
+  const s = propuestaPlanExamen(EXAMEN, "2026-11-10", "18:00", "09:00");
+  igual(s.length, 4);
+  cierto(!s.some(function (x) { return x.fecha === "2026-11-29"; }));
+});
+
+// ---------- ¿QUÉ ESTUDIO HOY? ----------
+prueba("Qué estudio hoy", "sin nada pendiente no propone nada", function () {
+  igual(queEstudioHoy(hoy()), []);
+});
+prueba("Qué estudio hoy", "una entrega atrasada va antes que un examen", function () {
+  estado.deberes = [{ id: "d", titulo: "Redacción", fecha: sumarDias(hoy(), -1), hecho: false }];
+  estado.examenes = [{ id: "e", asignatura: "Física", tema: "", fecha: sumarDias(hoy(), 2), hora: "" }];
+  igual(queEstudioHoy(hoy()).map(function (c) { return c.tipo; }), ["deber", "examen"]);
+});
+prueba("Qué estudio hoy", "el examen más cercano va primero", function () {
+  estado.examenes = [
+    { id: "a", asignatura: "Inglés", tema: "", fecha: sumarDias(hoy(), 6), hora: "" },
+    { id: "b", asignatura: "Historia", tema: "", fecha: sumarDias(hoy(), 1), hora: "" },
+    { id: "c", asignatura: "Lengua", tema: "", fecha: sumarDias(hoy(), 20), hora: "" }
+  ];
+  const c = queEstudioHoy(hoy());
+  igual(c.map(function (x) { return x.asignatura; }), ["Historia", "Inglés"], "el de dentro de 20 días no sale");
+  cierto(c[0].texto.includes("mañana"));
+});
+prueba("Qué estudio hoy", "como mucho enseña 3 cosas", function () {
+  for (let i = 0; i < 6; i++) estado.examenes.push({ id: "e" + i, asignatura: "A" + i, tema: "", fecha: sumarDias(hoy(), i + 1), hora: "" });
+  igual(queEstudioHoy(hoy()).length, 3);
+});
+prueba("Qué estudio hoy", "incluye las tarjetas que tocan hoy", function () {
+  estado.tarjetas = [{ id: "t", asignatura: "Inglés", caja: 1, proxima: hoy() }];
+  igual(queEstudioHoy(hoy())[0].tipo, "tarjetas");
+});
+
+// ---------- RESUMEN DEL DOMINGO ----------
+prueba("Resumen", "domingoDeLaSemana", function () {
+  igual(domingoDeLaSemana("2026-11-10"), "2026-11-15", "martes");
+  igual(domingoDeLaSemana("2026-11-15"), "2026-11-15", "domingo");
+  igual(domingoDeLaSemana("2026-11-16"), "2026-11-22", "lunes");
+});
+prueba("Resumen", "textoMinutos", function () {
+  igual(textoMinutos(45), "45 min");
+  igual(textoMinutos(120), "2 h");
+  igual(textoMinutos(200), "3 h 20 min");
+});
+prueba("Resumen", "cuenta los minutos y días de la semana y lo que viene", function () {
+  estado.sesiones = [
+    { fecha: "2026-11-10", min: 60 }, { fecha: "2026-11-10", min: 40 }, { fecha: "2026-11-12", min: 100 },
+    { fecha: "2026-11-08", min: 500 }   // la semana anterior: no cuenta
+  ];
+  estado.examenes = [{ id: "e", asignatura: "Física", fecha: "2026-11-18" }, { id: "f", asignatura: "Lengua", fecha: "2026-11-30" }];
+  estado.deberes = [{ id: "d", titulo: "X", fecha: "2026-11-17", hecho: false }];
+  const r = textoResumenSemana("2026-11-15");
+  cierto(r.cuerpo.includes("3 h 20 min en 2 días"), r.cuerpo);
+  cierto(r.cuerpo.includes("1 examen (Física) y 1 entrega"), r.cuerpo);
+});
+prueba("Resumen", "si no estudiaste, te anima", function () {
+  cierto(textoResumenSemana("2026-11-15").cuerpo.includes("no has estudiado"));
+});
+prueba("Resumen", "el texto cabe en el aviso (máximo 300 letras)", function () {
+  for (let i = 0; i < 40; i++) estado.examenes.push({ id: "e" + i, asignatura: "Asignatura con nombre muy largo " + i, fecha: "2026-11-17" });
+  cierto(textoResumenSemana("2026-11-15").cuerpo.length <= 300);
+});
+
+// ---------- ESTADÍSTICAS POR ASIGNATURA ----------
+prueba("Por asignatura", "suma los minutos de cada asignatura desde una fecha", function () {
+  estado.sesiones = [
+    { fecha: sumarDias(hoy(), -2), min: 30, asignatura: "Inglés" },
+    { fecha: sumarDias(hoy(), -1), min: 20, asignatura: "Inglés" },
+    { fecha: sumarDias(hoy(), -40), min: 99, asignatura: "Inglés" },
+    { fecha: hoy(), min: 25, asignatura: "" }
+  ];
+  igual(minutosPorAsignatura(sumarDias(hoy(), -6)), { "Inglés": 50, "Sin asignatura": 25 });
+  igual(minutosPorAsignatura(null)["Inglés"], 149, "siempre");
+});
+prueba("Por asignatura", "avisa de asignaturas con examen cerca que no has tocado", function () {
+  estado.sesiones = [{ fecha: hoy(), min: 30, asignatura: "Inglés" }];
+  estado.examenes = [
+    { id: "a", asignatura: "Inglés", fecha: sumarDias(hoy(), 3) },
+    { id: "b", asignatura: "Física", fecha: sumarDias(hoy(), 5) },
+    { id: "c", asignatura: "Lengua", fecha: sumarDias(hoy(), 30) }
+  ];
+  igual(asignaturasOlvidadas(hoy()).map(function (o) { return o.asignatura; }), ["Física"]);
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

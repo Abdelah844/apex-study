@@ -101,6 +101,7 @@ function pintarInicio() {
       '</div>' +
       '<div class="week" style="margin-top:8px">' + semana + '</div>' +
       '<button class="btn" data-act="ir" data-tab="estudiar" style="margin-top:10px">Empezar a estudiar</button>' +
+      '<button class="btn-sec full" data-act="que-estudio">🤔 ¿Qué estudio hoy?</button>' +
     '</div>' +
     tarjetaHorarioHoy() +
     tarjetaDeberesInicio() +
@@ -260,20 +261,9 @@ function pintarProgreso() {
     return '<div><span class="num">' + (minutos[i] || "") + '</span><i class="' + (minutos[i] ? "" : "cero") + '" style="height:' + alto + '%"></i>' + letra + '</div>';
   }).join("");
 
-  // Total y por asignatura
+  // Total de horas
   let total = 0;
-  const porAsig = {};
-  for (const s of estado.sesiones) {
-    total += s.min;
-    const a = s.asignatura || "Sin asignatura";
-    porAsig[a] = (porAsig[a] || 0) + s.min;
-  }
-  const asigs = Object.keys(porAsig).sort(function (a, b) { return porAsig[b] - porAsig[a]; });
-  const maxAsig = asigs.length ? porAsig[asigs[0]] : 1;
-  const listaAsig = asigs.map(function (a) {
-    return '<div class="stack tight" style="gap:4px"><div class="row between"><span class="name"><span class="punto-asig" style="background:' + colorAsig(a) + '"></span> ' + esc(a) + '</span><span class="muted num">' + porAsig[a] + ' min</span></div>' +
-      '<div class="bar"><i style="width:' + Math.round(porAsig[a] / maxAsig * 100) + '%;background:' + colorAsig(a) + '"></i></div></div>';
-  }).join("");
+  for (const s of estado.sesiones) total += s.min;
 
   const cumplidos = estado.planes.filter(function (p) { return p.hecho; }).length;
   const vencidos = estado.planes.filter(function (p) { return estadoPlan(p).clase !== "pend"; }).length;
@@ -287,7 +277,7 @@ function pintarProgreso() {
       '<div class="card"><p class="label">Palabra</p><p class="big-num num">' + cumplidos + '/' + vencidos + '</p><p class="muted small">planes cumplidos</p></div>' +
     '</div>' +
     '<div class="card stack"><h2>Últimos 7 días</h2><div class="grafica">' + barras + '</div></div>' +
-    '<div class="card stack"><h2>Por asignatura</h2>' + (listaAsig || '<p class="vacio">Cuando estudies, aquí verás en qué inviertes el tiempo.</p>') + '</div>' +
+    tarjetaPorAsignatura() +   // planificador.js
     '<div class="card"><h2>Últimas sesiones</h2><div class="list">' +
       (ultimas.length ? ultimas.map(function (s) {
         return '<div class="item"><div class="grow"><span class="name">' + esc(s.objetivo) + '</span><p class="muted small">' + fechaCorta(s.fecha) + ' · ' + s.hora + (s.asignatura ? ' · ' + esc(s.asignatura) : '') + '</p></div>' +

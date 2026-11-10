@@ -77,6 +77,7 @@ function guardarExamen(id) {
   guardar(); cerrarHoja();
   programarAvisosExamenNube(examen);   // pone (o cambia) sus avisos
   pintar();
+  if (!id) abrirPlanExamen(examen.id);   // examen nuevo: Apix propone un plan de estudio
 }
 
 function guardarPlan(minutos, id) {

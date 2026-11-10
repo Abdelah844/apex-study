@@ -124,9 +124,8 @@ const ACCIONES = {
   },
   "nuevo-plan": function (b) { hojaPlan(b.dataset.fecha, null); },
   "plan-de-examen": function (b) {
-    const ex = estado.examenes.find(function (e) { return e.id === b.dataset.id; });
     cerrarCapa();
-    hojaPlan(hoy(), ex);
+    abrirPlanExamen(b.dataset.id);   // Apix propone un plan de varias sesiones (planificador.js)
   },
   "tiempo-plan": function (b) {
     document.querySelectorAll('[data-act="tiempo-plan"]').forEach(function (c) { c.classList.toggle("on", c === b); });
@@ -164,7 +163,7 @@ const ACCIONES = {
 };
 
 // Añadimos los botones del horario semanal (están en horario.js)
-Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS, ACCIONES_TARJETAS, ACCIONES_SONIDOS, ACCIONES_BIENVENIDA);
+Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS, ACCIONES_TARJETAS, ACCIONES_SONIDOS, ACCIONES_BIENVENIDA, ACCIONES_PLANIFICADOR);
 
 // Un solo "escuchador" para todos los clics de la app
 document.addEventListener("click", function (ev) {
@@ -186,12 +185,19 @@ else if (estado.descanso) abrirDescanso();
 else if (!estado.bienvenidaVista) abrirBienvenida();   // primera vez: Apix se presenta
 else setTimeout(recordarCopia, 2500);                  // una vez al mes: "¿hacemos una copia?"
 
+// Resumen del domingo: lo actualizamos una vez al día (con los exámenes y deberes nuevos)
+if (localStorage.getItem("apex-study-resumen") !== hoy()) {
+  localStorage.setItem("apex-study-resumen", hoy());
+  setTimeout(programarResumenSemana, 5000);
+}
+
 comprobarPlanes();
 setInterval(comprobarPlanes, 20000);
 
 // Si se abrió la app tocando un aviso de Apix, enseña la pantalla del plan
 function abrirDesdeAviso(planId) {
   if (planId === "descanso") return;   // ya lo gestiona el arranque
+  if (planId.indexOf("resumen-") === 0) { vistaProgreso = "estudio"; irA("progreso"); return; }
   if (planId.indexOf("deb-") === 0) { vistaAgenda = "deberes"; irA("agenda"); return; }
   if (planId.indexOf("hor-") === 0) {
     const b = (estado.horario || []).find(function (x) { return planId.indexOf("hor-" + x.id + "-") === 0; });

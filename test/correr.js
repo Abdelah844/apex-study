@@ -16,12 +16,13 @@ class AlmacenFalso {
   removeItem(k) { delete this._datos[k]; }
 }
 
-const contexto = { console: console, localStorage: new AlmacenFalso(), Math: Math, Date: Date, JSON: JSON, Intl: Intl };
+const contexto = { console: console, localStorage: new AlmacenFalso(), Math: Math, Date: Date, JSON: JSON, Intl: Intl,
+  document: { addEventListener: function () {} } };   // planificador.js escucha cambios en la página
 vm.createContext(contexto);
 
 const raiz = path.join(__dirname, "..");
 // Solo los archivos de lógica (los de pantallas necesitan navegador)
-const LOGICA = ["datos.js", "mascota.js", "horario.js", "deberes.js", "notas.js", "tarjetas.js", "avisos.js"];
+const LOGICA = ["datos.js", "mascota.js", "horario.js", "deberes.js", "notas.js", "tarjetas.js", "avisos.js", "planificador.js"];
 for (const archivo of LOGICA.concat(["test/pruebas.js"])) {
   vm.runInContext(fs.readFileSync(path.join(raiz, archivo), "utf8"), contexto, { filename: archivo });
 }

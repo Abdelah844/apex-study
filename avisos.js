@@ -233,13 +233,14 @@ function programarTodosNube() {
   for (const e of estado.examenes) programarAvisosExamenNube(e);
   for (const d of estado.deberes) programarAvisosDeber(d);
   programarHorarioNube();
+  programarResumenSemana();
 }
 
 // ---------- AVISOS DE EXAMEN ----------
 // Cada examen tiene 2 avisos: el día antes a las 18:00 y el mismo día a las 07:30
 // Ajustes de los recordatorios (con valores por defecto si faltan)
 function configAvisos() {
-  return Object.assign({ tarde: "18:00", manana: "07:30", semana: false, tresDias: true }, estado.avisosConfig || {});
+  return Object.assign({ tarde: "18:00", manana: "07:30", semana: false, tresDias: true, resumen: true }, estado.avisosConfig || {});
 }
 
 // Todos los avisos posibles de un examen; "activo" dice si están encendidos en Ajustes

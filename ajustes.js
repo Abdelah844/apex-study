@@ -75,11 +75,12 @@ function tarjetaRecordatorios() {
     return '<button class="interruptor ' + (c[clave] ? "on" : "") + '" data-act="cambiar-aviso" data-clave="' + clave + '"><span>' + texto + '</span><i></i></button>';
   }
   return '<div class="card stack tight"><h3>Recordatorios</h3>' +
-    '<p class="muted small">Cuándo te avisa Apix de los exámenes y deberes.</p>' +
+    '<p class="muted small">Cuándo te avisa Apix de los exámenes, los deberes y tu semana.</p>' +
     '<div class="dos"><label class="f">El día antes a las<input id="avTarde" type="time" data-cambio="hora-aviso" value="' + c.tarde + '"></label>' +
     '<label class="f">El mismo día a las<input id="avManana" type="time" data-cambio="hora-aviso" value="' + c.manana + '"></label></div>' +
     interruptor("tresDias", "Avisar 3 días antes del examen") +
     interruptor("semana", "Avisar 1 semana antes del examen") +
+    interruptor("resumen", "Resumen de tu semana (domingos a las 20:00)") +
     '</div>';
 }
 
@@ -89,6 +90,7 @@ function guardarConfigAvisos(cambios) {
   guardar();
   for (const e of proximosExamenes()) programarAvisosExamenNube(e);
   for (const d of deberesPendientes()) programarAvisosDeber(d);
+  programarResumenSemana();
 }
 
 document.addEventListener("change", function (ev) {

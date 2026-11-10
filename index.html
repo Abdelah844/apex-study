@@ -300,8 +300,8 @@ button:active { transform: scale(.97); }
 @keyframes subir { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ===== AVISO DE APIX Y CELEBRACIÓN (pantalla completa) ===== */
-.capa { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 20px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); }
-.capa .msg { text-align: center; max-width: 360px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; animation: entra .5s ease-out; }
+.capa { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; overflow-y: auto; overscroll-behavior: contain; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); }
+.capa .msg { margin: auto 0; text-align: center; max-width: 360px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; animation: entra .5s ease-out; }
 .capa h1 { font-size: 2rem; }
 @keyframes entra { from { transform: translateY(14px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
 
@@ -359,6 +359,7 @@ nav.tabs button.on svg { color: var(--accent); filter: drop-shadow(0 0 6px var(-
 <script src="ajustes.js"></script>
 <script src="sesion.js"></script>
 <script src="avisos.js"></script>
+<script src="planificador.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
