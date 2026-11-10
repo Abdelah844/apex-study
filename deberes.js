@@ -30,7 +30,8 @@ function filaDeber(d, conBorrar) {
     '<div class="grow"><span class="name">' + esc(d.titulo) + '</span>' +
     '<p class="muted small">' + (d.asignatura ? '<span class="punto-asig" style="background:' + colorAsig(d.asignatura) + '"></span> ' + esc(d.asignatura) + ' · ' : '') + 'Entrega: ' + fechaCorta(d.fecha) + '</p></div>' +
     '<span class="pill ' + et.clase + '">' + et.texto + '</span>' +
-    (conBorrar ? '<div class="acciones"><button class="btn-sec btn-danger" data-act="borrar-deber" data-id="' + d.id + '">Borrar</button></div>' : '') +
+    (conBorrar ? '<div class="acciones">' + (d.hecho ? '' : '<button class="btn-sec" data-act="editar-deber" data-id="' + d.id + '">Editar</button>') +
+      '<button class="btn-sec btn-danger" data-act="borrar-deber" data-id="' + d.id + '">Borrar</button></div>' : '') +
     '</div>';
 }
 
@@ -62,26 +63,36 @@ function tarjetaDeberesInicio() {
 }
 
 // ---------- Formulario ----------
-function hojaDeber(fecha) {
-  abrirHoja('<div class="row between"><h2>Nuevos deberes</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
-    '<label class="f">¿Qué hay que hacer?<input id="deTitulo" placeholder="Ej: ejercicios 1-5 de la página 42" maxlength="80"></label>' +
-    '<label class="f">Asignatura (opcional)' + selectorAsig("deAsig", "") + '</label>' +
-    '<label class="f">¿Cuándo hay que entregarlo?<input id="deFecha" type="date" value="' + (fecha || sumarDias(hoy(), 1)) + '"></label>' +
+// id = deberes a editar (si no hay, son nuevos)
+function hojaDeber(fecha, id) {
+  const d = id ? estado.deberes.find(function (x) { return x.id === id; }) : null;
+  abrirHoja('<div class="row between"><h2>' + (d ? "Editar deberes" : "Nuevos deberes") + '</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+    '<label class="f">¿Qué hay que hacer?<input id="deTitulo" value="' + (d ? esc(d.titulo) : '') + '" placeholder="Ej: ejercicios 1-5 de la página 42" maxlength="80"></label>' +
+    '<label class="f">Asignatura (opcional)' + selectorAsig("deAsig", d ? d.asignatura : "") + '</label>' +
+    '<label class="f">¿Cuándo hay que entregarlo?<input id="deFecha" type="date" value="' + (d ? d.fecha : (fecha || sumarDias(hoy(), 1))) + '"></label>' +
     '<p class="err" id="deErr"></p>' +
-    '<button class="btn" data-act="guardar-deber">Guardar</button>');
+    '<button class="btn" data-act="guardar-deber" data-id="' + (d ? d.id : '') + '">' + (d ? "Guardar cambios" : "Guardar") + '</button>');
 }
 
-function guardarDeber() {
+function guardarDeber(id) {
   const titulo = $("deTitulo").value.trim();
   const fecha = $("deFecha").value;
   if (!titulo) { $("deErr").textContent = "Escribe qué hay que hacer."; return; }
   if (!fecha) { $("deErr").textContent = "Elige el día de entrega."; return; }
-  const deber = { id: nuevoId(), titulo: titulo, asignatura: leerAsig("deAsig"), fecha: fecha, hecho: false };
   estado.deberes = estado.deberes || [];
-  estado.deberes.push(deber);
+  const datos = { titulo: titulo, asignatura: leerAsig("deAsig"), fecha: fecha };
+  let deber;
+  if (id) {
+    deber = estado.deberes.find(function (x) { return x.id === id; });
+    Object.assign(deber, datos);
+    toast("✓ Deberes cambiados");
+  } else {
+    deber = Object.assign({ id: nuevoId(), hecho: false }, datos);
+    estado.deberes.push(deber);
+    toast("✏️ Deberes apuntados");
+  }
   guardar(); cerrarHoja();
   programarAvisosDeber(deber);
-  toast("✏️ Deberes apuntados");
   pintar();
 }
 
@@ -89,14 +100,16 @@ function guardarDeber() {
 function avisosDeDeber(d) {
   const que = "«" + d.titulo + "»" + (d.asignatura ? " de " + d.asignatura : "");
   return [
-    { clave: "deb-" + d.id + "-antes", cuando: new Date(sumarDias(d.fecha, -1) + "T18:00:00"), texto: "Mañana entregas " + que + ". ¿Lo tienes hecho?" },
-    { clave: "deb-" + d.id + "-dia", cuando: new Date(d.fecha + "T07:30:00"), texto: "Hoy entregas " + que + ". ¡Que no se te olvide!" }
+    { clave: "deb-" + d.id + "-antes", cuando: new Date(sumarDias(d.fecha, -1) + "T" + configAvisos().tarde + ":00"), texto: "Mañana entregas " + que + ". ¿Lo tienes hecho?" },
+    { clave: "deb-" + d.id + "-dia", cuando: new Date(d.fecha + "T" + configAvisos().manana + ":00"), texto: "Hoy entregas " + que + ". ¡Que no se te olvide!" }
   ];
 }
 
 function programarAvisosDeber(d) {
-  if (d.hecho) return;
-  for (const a of avisosDeDeber(d)) avisoNube(a.clave, a.cuando, "Apix ✏️", a.texto);
+  for (const a of avisosDeDeber(d)) {
+    if (!d.hecho && a.cuando > new Date()) avisoNube(a.clave, a.cuando, "Apix ✏️", a.texto);
+    else cancelarAvisoNube(a.clave);   // ya hecho o ya pasado: lo quitamos
+  }
 }
 
 function cancelarAvisosDeber(d) {
@@ -123,8 +136,9 @@ function comprobarDeberes() {
 // ---------- Botones ----------
 const ACCIONES_DEBERES = {
   "ir-deberes": function () { vistaAgenda = "deberes"; irA("agenda"); },
-  "nuevo-deber": function (b) { hojaDeber(b.dataset.fecha); },
-  "guardar-deber": function () { guardarDeber(); },
+  "nuevo-deber": function (b) { hojaDeber(b.dataset.fecha, null); },
+  "editar-deber": function (b) { hojaDeber(null, b.dataset.id); },
+  "guardar-deber": function (b) { guardarDeber(b.dataset.id); },
   "hecho-deber": function (b) {
     const d = estado.deberes.find(function (x) { return x.id === b.dataset.id; });
     if (!d) return;

@@ -6,10 +6,10 @@
 // Si cambias algún archivo, sube el número de VERSION.
 // =====================================================
 
-const VERSION = "apex-study-2.1.0";
+const VERSION = "apex-study-2.3.0";
 
 const ARCHIVOS = [
-  "./", "./index.html", "./manifest.json", "./app.js", "./mascota.js", "./horario.js", "./deberes.js", "./notas.js", "./tarjetas.js", "./sonidos.js", "./bienvenida.js",
+  "./", "./index.html", "./manifest.json", "./app.js", "./mascota.js", "./horario.js", "./deberes.js", "./notas.js", "./tarjetas.js", "./sonidos.js", "./bienvenida.js", "./calendario-movil.js",
   "./iconos/icono-192.png", "./iconos/icono-512.png",
   "./manrope.woff", "./chakra-petch-medium.woff", "./chakra-petch-semibold.woff", "./chakra-petch-bold.woff"
 ];
@@ -29,18 +29,21 @@ self.addEventListener("activate", function (evento) {
   }).then(function () { return self.clients.claim(); }));
 });
 
-// 3. Primero internet (para tener la última versión); si no hay, la copia guardada
+// 3. Primero la copia guardada (se abre al instante, aunque no haya cobertura)
+//    y a la vez se descarga la versión nueva para la próxima vez.
 self.addEventListener("fetch", function (evento) {
   if (evento.request.method !== "GET") return;
   if (new URL(evento.request.url).origin !== self.location.origin) return;
-  evento.respondWith(fetch(evento.request, { cache: "no-cache" }).then(function (r) {
-    if (r && r.ok) {
-      const copia = r.clone();
-      caches.open(VERSION).then(function (cache) { cache.put(evento.request, copia); });
-    }
-    return r;
-  }).catch(function () {
-    return caches.match(evento.request, { ignoreSearch: true }).then(function (g) { return g || caches.match("./index.html"); });
+  evento.respondWith(caches.open(VERSION).then(function (cache) {
+    return cache.match(evento.request, { ignoreSearch: true }).then(function (guardada) {
+      // Pedimos la versión nueva por internet (sin esperar a que llegue)
+      const deInternet = fetch(evento.request, { cache: "no-cache" }).then(function (r) {
+        if (r && r.ok) cache.put(evento.request, r.clone());
+        return r;
+      }).catch(function () { return guardada || cache.match("./index.html"); });
+      // Si tenemos copia, la damos ya; si no, esperamos a internet
+      return guardada || deInternet;
+    });
   }));
 });
 
