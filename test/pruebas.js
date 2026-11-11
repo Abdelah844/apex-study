@@ -494,6 +494,29 @@ prueba("Rangos", "numeroBonito pone el punto de miles", function () {
   igual(numeroBonito(950), "950");
 });
 
+
+// ---------- PLANES DE "OTRA COSA" ----------
+prueba("Planes", "los planes antiguos (sin tipo) son de estudio", function () {
+  cierto(esPlanEstudio({ objetivo: "Repasar" }));
+  cierto(!esPlanEstudio({ tipo: "otro", objetivo: "Cargar los cascos" }));
+});
+prueba("Planes", "un plan de otra cosa tiene botón Hecho, no Estudiar", function () {
+  cierto(botonPlan({ id: "a", tipo: "otro" }, "▶ Estudiar").includes("plan-hecho"));
+  cierto(botonPlan({ id: "b" }, "▶ Estudiar").includes("empezar-plan"));
+});
+prueba("Planes", "el aviso de otra cosa no habla de minutos de estudio", function () {
+  igual(textoAvisoPlan({ tipo: "otro", objetivo: "Abrigo", min: 0 }), FRASE_PALABRA + " Toca: «Abrigo».");
+  cierto(textoAvisoPlan({ objetivo: "Repasar", min: 25 }).includes("25 min"));
+});
+prueba("Planes", "cumplir un plan de otra cosa no da XP", function () {
+  estado.planes = [{ id: "a", tipo: "otro", fecha: "2026-11-10", hecho: true }];
+  igual(xpTotal(), 0);
+});
+prueba("Planes", "¿Qué estudio hoy? no propone planes de otra cosa", function () {
+  estado.planes = [{ id: "a", tipo: "otro", objetivo: "Abrigo", fecha: hoy(), hora: "23:59", hecho: false }];
+  igual(queEstudioHoy(hoy()), []);
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

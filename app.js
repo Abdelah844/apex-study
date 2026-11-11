@@ -132,8 +132,20 @@ const ACCIONES = {
     $("plGuardar").dataset.min = b.dataset.min;
   },
   "guardar-plan": function (b) { guardarPlan(Number(b.dataset.min), b.dataset.id); },
+  "tipo-plan": function (b) { cambiarTipoPlan(b.dataset.t); },
+  "plan-hecho": function (b) {
+    const p = estado.planes.find(function (x) { return x.id === b.dataset.id; });
+    if (!p) return;
+    p.hecho = true;
+    cancelarAvisosPlan(p.id);   // ya está hecho: no hace falta avisar
+    guardar();
+    cerrarCapa();
+    pintar();
+    vibrar(20);
+    toast("✓ ¡Palabra cumplida!");
+  },
   "borrar-plan": function (b) {
-    if (!confirm("¿Borrar este plan de estudio?")) return;
+    if (!confirm("¿Borrar este plan?")) return;
     estado.planes = estado.planes.filter(function (p) { return p.id !== b.dataset.id; });
     cancelarAvisosPlan(b.dataset.id);
     guardar(); pintar();

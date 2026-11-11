@@ -24,14 +24,31 @@ function hojaExamen(fecha, id) {
 
 // id = plan a editar (si no hay, es uno nuevo)
 let antesElegido = 0;
+// Tipo de plan elegido en el formulario: "estudio" u "otro"
+let tipoPlanElegido = "estudio";
+const PISTA_ESTUDIO = "Ej: repasar ecuaciones, gramática...";
+const PISTA_OTRO = "Ej: cargar los cascos, preparar la mochila...";
+
+// Cambia el formulario según el tipo (sin borrar lo que ya has escrito)
+function cambiarTipoPlan(tipo) {
+  tipoPlanElegido = tipo;
+  const otro = tipo === "otro";
+  for (const b of document.querySelectorAll("#plTipo button")) b.classList.toggle("on", b.dataset.t === tipo);
+  for (const el of document.querySelectorAll("#hoja .solo-estudio")) el.hidden = otro;
+  $("plObjTexto").textContent = otro ? "¿Qué tienes que hacer?" : "¿Qué vas a estudiar?";
+  $("plObj").placeholder = otro ? PISTA_OTRO : PISTA_ESTUDIO;
+}
+
 function hojaPlan(fecha, examen, id) {
   const p = id ? estado.planes.find(function (x) { return x.id === id; }) : null;
   let objetivo = "";
   let asig = "";
   if (examen) { objetivo = "Repasar " + (examen.tema || examen.asignatura); asig = examen.asignatura; }
   if (p) { objetivo = p.objetivo; asig = p.asignatura; }
-  const minutos = p ? p.min : 25;
+  const minutos = p ? (p.min || 25) : 25;
   antesElegido = p ? (p.antes || 0) : 10;
+  tipoPlanElegido = p && p.tipo === "otro" ? "otro" : "estudio";
+  const otro = tipoPlanElegido === "otro";
   const tiempos = [15, 25, 45, 60, 90].map(function (m) {
     return '<button class="chip ' + (m === minutos ? "on" : "") + '" data-act="tiempo-plan" data-min="' + m + '">' + m + ' min</button>';
   }).join("");
@@ -44,13 +61,17 @@ function hojaPlan(fecha, examen, id) {
   let horaSugerida = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
   if (fecha && fecha !== hoy()) horaSugerida = "18:00";
   if (p) horaSugerida = p.hora;
-  abrirHoja('<div class="row between"><h2>' + (p ? "Editar plan" : "¿Cuándo empiezas?") + '</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+  abrirHoja('<div class="row between"><h2>' + (p ? "Editar plan" : "Nuevo plan") + '</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
     tarjetaApix("anima", "Apix", "Cuando llegue la hora te avisaré. Si lo dices, lo cumples.", "") +
-    '<label class="f">¿Qué vas a estudiar?<input id="plObj" value="' + esc(objetivo) + '" placeholder="Ej: repasar ecuaciones, gramática..." maxlength="80"></label>' +
-    '<label class="f">Asignatura (opcional)' + selectorAsig("plAsig", asig) + '</label>' +
+    '<div class="seg" id="plTipo">' +
+      '<button class="' + (otro ? "" : "on") + '" data-act="tipo-plan" data-t="estudio">📚 Estudiar</button>' +
+      '<button class="' + (otro ? "on" : "") + '" data-act="tipo-plan" data-t="otro">✅ Otra cosa</button></div>' +
+    '<label class="f"><span id="plObjTexto">' + (otro ? "¿Qué tienes que hacer?" : "¿Qué vas a estudiar?") + '</span>' +
+      '<input id="plObj" value="' + esc(objetivo) + '" placeholder="' + (otro ? PISTA_OTRO : PISTA_ESTUDIO) + '" maxlength="80"></label>' +
+    '<label class="f solo-estudio"' + (otro ? " hidden" : "") + '>Asignatura (opcional)' + selectorAsig("plAsig", asig) + '</label>' +
     '<div class="dos"><label class="f">Día<input id="plFecha" type="date" value="' + (p ? p.fecha : (fecha || hoy())) + '"></label>' +
-    '<label class="f">Hora de empezar<input id="plHora" type="time" value="' + horaSugerida + '"></label></div>' +
-    '<div><p class="label" style="margin-bottom:8px">Duración</p><div class="chips" id="plTiempos">' + tiempos + '</div></div>' +
+    '<label class="f">Hora<input id="plHora" type="time" value="' + horaSugerida + '"></label></div>' +
+    '<div class="solo-estudio"' + (otro ? " hidden" : "") + '><p class="label" style="margin-bottom:8px">Duración</p><div class="chips" id="plTiempos">' + tiempos + '</div></div>' +
     '<div><p class="label" style="margin-bottom:8px">Avisarme también</p><div class="chips">' + antes + '</div></div>' +
     '<p class="err" id="plErr"></p>' +
     '<button class="btn" data-act="guardar-plan" data-min="' + minutos + '" data-id="' + (p ? p.id : '') + '" id="plGuardar">' + (p ? "Guardar cambios" : "Doy mi palabra") + '</button>');
@@ -84,9 +105,10 @@ function guardarPlan(minutos, id) {
   const objetivo = $("plObj").value.trim();
   const fecha = $("plFecha").value;
   const hora = $("plHora").value;
-  if (!objetivo) { $("plErr").textContent = "Escribe qué vas a estudiar."; return; }
+  const otro = tipoPlanElegido === "otro";
+  if (!objetivo) { $("plErr").textContent = otro ? "Escribe qué tienes que hacer." : "Escribe qué vas a estudiar."; return; }
   if (!fecha || !hora) { $("plErr").textContent = "Elige el día y la hora."; return; }
-  const datos = { objetivo: objetivo, asignatura: leerAsig("plAsig"), fecha: fecha, hora: hora, min: minutos, antes: antesElegido, avisado: false };
+  const datos = { tipo: tipoPlanElegido, objetivo: objetivo, asignatura: otro ? "" : leerAsig("plAsig"), fecha: fecha, hora: hora, min: otro ? 0 : minutos, antes: antesElegido, avisado: false };
   if (new Date(fecha + "T" + hora + ":00") < new Date(Date.now() - 60000)) { $("plErr").textContent = "Esa hora ya ha pasado. Elige una futura."; return; }
   let plan;
   if (id) {
@@ -103,7 +125,7 @@ function guardarPlan(minutos, id) {
   // Si no tiene los avisos activados, se lo pedimos (sin avisos, Apix no puede recordárselo)
   if (permisoAvisos() === "default") {
     mostrarCapa('<div class="msg">' + apixSVG("anima", "lg") + '<h1>¡Trato hecho!</h1>' +
-      '<p>El ' + fechaLarga(fecha) + ' a las ' + hora + ' empiezas «' + esc(objetivo) + '».</p>' +
+      '<p>El ' + fechaLarga(fecha) + ' a las ' + hora + ': «' + esc(objetivo) + '».</p>' +
       '<p class="muted">Activa los avisos para que pueda recordártelo.</p>' +
       '<button class="btn" data-act="activar-avisos">Activar avisos</button><button class="btn-txt" data-act="cerrar-capa">Ahora no</button></div>');
   } else {

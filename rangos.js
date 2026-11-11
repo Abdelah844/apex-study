@@ -37,7 +37,7 @@ function xpPorDia() {
     sumar(s.fecha, s.min * XP.minuto);
     if (!s.distracciones) sumar(s.fecha, XP.sinSalir);
   }
-  for (const p of estado.planes) if (p.hecho) sumar(p.fecha, XP.plan);
+  for (const p of estado.planes) if (p.hecho && esPlanEstudio(p)) sumar(p.fecha, XP.plan);   // "otra cosa" no da XP
   const repasos = estado.repasos || {};
   for (const fecha in repasos) sumar(fecha, repasos[fecha] * XP.tarjeta);
 

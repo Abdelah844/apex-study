@@ -44,19 +44,26 @@ function comprobarPlanes() {
     if (!p.hecho && !p.avisado && ahora >= hora && ahora - hora < 2 * 3600000) {
       p.avisado = true;
       guardar();
-      mostrarAviso("Apix 📚", FRASE_PALABRA + " Toca empezar «" + p.objetivo + "» (" + p.min + " min).", "plan-" + p.id);
+      mostrarAviso("Apix 📚", textoAvisoPlan(p), "plan-" + p.id);
       avisoPalabra(p);
       return;
     }
   }
 }
 
+// Texto del aviso de un plan
+function textoAvisoPlan(p) {
+  if (esPlanEstudio(p)) return FRASE_PALABRA + " Toca empezar «" + p.objetivo + "» (" + p.min + " min).";
+  return FRASE_PALABRA + " Toca: «" + p.objetivo + "».";
+}
+
 // Pantalla grande de Apix: "Tienes que cumplir con tu palabra"
 function avisoPalabra(p) {
   mostrarCapa('<div class="msg">' + apixSVG("anima", "xl") + '<p class="label">Apix · ' + p.hora + '</p>' +
     '<h1>' + FRASE_PALABRA + '</h1>' +
-    '<p>Dijiste que ahora empezarías <b>«' + esc(p.objetivo) + '»</b> durante ' + p.min + ' min.</p>' +
-    '<button class="btn" data-act="empezar-plan" data-id="' + p.id + '">Empezar ahora</button>' +
+    (esPlanEstudio(p) ? '<p>Dijiste que ahora empezarías <b>«' + esc(p.objetivo) + '»</b> durante ' + p.min + ' min.</p>'
+      : '<p>Dijiste que ahora harías <b>«' + esc(p.objetivo) + '»</b>.</p>') +
+    botonPlan(p, "Empezar ahora").replace('btn auto', 'btn') +
     '<button class="btn-sec full" data-act="posponer" data-id="' + p.id + '">Dame 10 minutos</button></div>');
 }
 
@@ -206,7 +213,7 @@ async function programarAvisoNube(p) {
       p_plan: p.id,
       p_cuando: fechaHoraPlan(p).toISOString(),
       p_titulo: "Apix 📚",
-      p_cuerpo: FRASE_PALABRA + " Toca empezar «" + p.objetivo + "» (" + p.min + " min)."
+      p_cuerpo: textoAvisoPlan(p)
     });
   } catch (e) {
     console.warn("No se pudo programar el aviso en la nube:", e);
@@ -279,7 +286,7 @@ function programarAvisoPlan(p) {
   programarAvisoNube(p);
   const antes = new Date(fechaHoraPlan(p).getTime() - (p.antes || 0) * 60000);
   if (p.antes && antes > new Date()) {
-    avisoNube(p.id + "-antes", antes, "Apix ⏰", "En " + p.antes + " min empiezas «" + p.objetivo + "». Ve preparando tus cosas.");
+    avisoNube(p.id + "-antes", antes, "Apix ⏰", "En " + p.antes + " min: «" + p.objetivo + "». " + (esPlanEstudio(p) ? "Ve preparando tus cosas." : "Que no se te olvide."));
   } else {
     cancelarAvisoNube(p.id + "-antes");
   }

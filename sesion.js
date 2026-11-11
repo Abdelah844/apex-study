@@ -80,7 +80,7 @@ function terminarSesion() {
 
   // El plan queda cumplido: el de esta sesión, o el primero pendiente de hoy
   let plan = estado.planes.find(function (p) { return p.id === s.planId; });
-  if (!plan) plan = planesDelDia(hoy()).find(function (p) { return !p.hecho; });
+  if (!plan) plan = planesDelDia(hoy()).find(function (p) { return !p.hecho && esPlanEstudio(p); });
   if (plan) { plan.hecho = true; cancelarAvisosPlan(plan.id); }
 
   estado.sesionActual = null;

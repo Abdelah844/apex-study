@@ -114,6 +114,17 @@ function minutosDelDia(iso) {
   return total;
 }
 
+// ---------- TIPOS DE PLAN ----------
+// Un plan puede ser para estudiar (lo normal) o para otra cosa (cargar los cascos, preparar la mochila...).
+// Los planes antiguos no tienen "tipo": cuentan como de estudio.
+function esPlanEstudio(p) { return p.tipo !== "otro"; }
+
+// El botón principal de un plan: "Estudiar" o "Hecho"
+function botonPlan(p, textoEstudiar) {
+  if (esPlanEstudio(p)) return '<button class="btn auto" data-act="empezar-plan" data-id="' + p.id + '">' + textoEstudiar + '</button>';
+  return '<button class="btn auto" data-act="plan-hecho" data-id="' + p.id + '">✓ Hecho</button>';
+}
+
 // ---------- RACHA CON PROTECTOR 🛡️ ----------
 // Una vez por semana (de lunes a domingo), si un día no estudias, no pierdes la racha.
 // Reglas: solo salva días sueltos (el día de antes sí estudiaste) y uno por semana.

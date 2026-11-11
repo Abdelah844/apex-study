@@ -60,13 +60,15 @@ function filaPlan(p, conBotones) {
   let botones = "";
   if (conBotones) {
     // Puedes ponerte a estudiar ya, aunque el plan sea para más tarde
-    if (!p.hecho) botones += '<button class="btn auto" data-act="empezar-plan" data-id="' + p.id + '">▶ Estudiar</button>';
+    if (!p.hecho) botones += botonPlan(p, "▶ Estudiar");   // de estudio: "Estudiar"; otra cosa: "Hecho"
     if (!p.hecho) botones += '<button class="btn-sec" data-act="editar-plan" data-id="' + p.id + '">Editar</button>';
     botones += '<button class="btn-sec btn-danger" data-act="borrar-plan" data-id="' + p.id + '">Borrar</button>';
+  } else if (!p.hecho && !esPlanEstudio(p)) {
+    botones = botonPlan(p, "");   // aunque ya haya pasado, puedes marcarlo como hecho
   }
   return '<div class="item"><div class="dia-caja"><b>' + p.hora + '</b><span>' + (p.fecha === hoy() ? "hoy" : fechaCorta(p.fecha)) + '</span></div>' +
     '<div class="grow"><span class="name">' + esc(p.objetivo) + '</span>' +
-    '<p class="muted small">' + (p.asignatura ? esc(p.asignatura) + ' · ' : '') + p.min + ' min</p>' +
+    '<p class="muted small">' + (esPlanEstudio(p) ? (p.asignatura ? esc(p.asignatura) + ' · ' : '') + p.min + ' min' : '✅ Otra cosa') + '</p>' +
     '</div><span class="pill ' + st.clase + '">' + st.texto + '</span>' +
     (botones ? '<div class="acciones">' + botones + '</div>' : '') + '</div>';
 }
@@ -75,7 +77,7 @@ function filaPlan(p, conBotones) {
 function pintarInicio() {
   const apix = estadoMascota();
   let botonApix = "";
-  if (apix.plan) botonApix = '<button class="btn auto" data-act="empezar-plan" data-id="' + apix.plan + '">Empezar ahora</button>';
+  if (apix.plan) botonApix = botonPlan(estado.planes.find(function (p) { return p.id === apix.plan; }), "Empezar ahora");
   if (apix.boton) botonApix = apix.boton;
 
   // Semana actual (de lunes a domingo)
@@ -173,9 +175,9 @@ function pintarAgenda() {
     const futuros = estado.planes.filter(function (p) { return p.fecha >= hoy(); }).sort(function (a, b) { return (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1; });
     const pasados = estado.planes.filter(function (p) { return p.fecha < hoy(); }).sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; }).slice(0, 10);
     contenido = '<div class="card"><div class="list">' +
-      (futuros.length ? futuros.map(function (p) { return filaPlan(p, true); }).join("") : '<p class="vacio">Aún no has dicho cuándo vas a estudiar.</p>') +
+      (futuros.length ? futuros.map(function (p) { return filaPlan(p, true); }).join("") : '<p class="vacio">No tienes planes. Apunta cuándo vas a estudiar o cualquier cosa que tengas que hacer.</p>') +
       '</div></div>' +
-      '<button class="btn" data-act="nuevo-plan">+ ¿Cuándo empiezo a estudiar?</button>' +
+      '<button class="btn" data-act="nuevo-plan">+ Nuevo plan</button>' +
       (pasados.length ? '<div class="card"><p class="label">Anteriores</p><div class="list">' + pasados.map(function (p) { return filaPlan(p, false); }).join("") + '</div></div>' : '');
   }
 

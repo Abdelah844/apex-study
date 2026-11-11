@@ -109,7 +109,7 @@ function queEstudioHoy(fechaHoy) {
 
   // Planes de hoy sin cumplir: lo prometiste
   for (const p of planesDelDia(fechaHoy)) {
-    if (p.hecho) continue;
+    if (p.hecho || !esPlanEstudio(p)) continue;
     cosas.push({ tipo: "plan", puntos: 95, id: p.id, titulo: p.objetivo, texto: "Lo prometiste para las " + p.hora });
   }
 

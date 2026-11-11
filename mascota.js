@@ -54,7 +54,7 @@ function estadoMascota() {
   if (incumplido) {
     return {
       humor: "enfadado",
-      mensaje: "Dijiste que a las " + incumplido.hora + " empezarías «" + incumplido.objetivo + "». " + FRASE_PALABRA,
+      mensaje: (esPlanEstudio(incumplido) ? "Dijiste que a las " + incumplido.hora + " empezarías «" : "A las " + incumplido.hora + " tenías que hacer «") + incumplido.objetivo + "». " + FRASE_PALABRA,
       plan: incumplido.id
     };
   }
@@ -64,7 +64,7 @@ function estadoMascota() {
   if (pendiente) {
     return {
       humor: "anima",
-      mensaje: "Hoy a las " + pendiente.hora + " empiezas «" + pendiente.objetivo + "». " + FRASE_PALABRA,
+      mensaje: "Hoy a las " + pendiente.hora + (esPlanEstudio(pendiente) ? " empiezas «" : " tienes que hacer «") + pendiente.objetivo + "». " + FRASE_PALABRA,
       plan: pendiente.id
     };
   }
