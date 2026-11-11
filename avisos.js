@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · AVISOS
+// APIX STUDY · AVISOS
 // Avisos con la app abierta, avisos desde la nube (Supabase),
 // diagnóstico de avisos y mensajes cortos (toast).
 // =====================================================
@@ -65,7 +65,7 @@ function avisoPalabra(p) {
 // en Supabase, y Supabase lo envía a la hora exacta (notificación push).
 const SUPABASE_URL = "https://bwgukadlvyhogwtszlhl.supabase.co";
 const SUPABASE_CLAVE = "sb_publishable_-rnOK3rj54mx7h4s0-L_yA_rgrhU6SU";   // clave pública (es normal que esté aquí)
-// Función de Supabase que envía los avisos (la de Apex Study, distinta de la de Apex Gym)
+// Función de Supabase que envía los avisos (la de Apix Study, distinta de la de Apix Gym)
 const FUNCION_AVISOS = SUPABASE_URL + "/functions/v1/study-enviar-avisos";
 
 // Clave pública de avisos: se la pedimos a la función y la guardamos en el móvil

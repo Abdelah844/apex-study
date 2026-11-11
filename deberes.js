@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · DEBERES Y ENTREGAS
+// APIX STUDY · DEBERES Y ENTREGAS
 // Cada deber: { id, titulo, asignatura, fecha, hecho }
 //   fecha = día de entrega ("2026-11-10")
 // Apix avisa el día antes a las 18:00 y el mismo día a las 7:30 (si no está hecho).

@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · SESIÓN DE ESTUDIO Y DESCANSOS
+// APIX STUDY · SESIÓN DE ESTUDIO Y DESCANSOS
 // Pantalla de concentración, fin de la sesión y descansos Pomodoro.
 // =====================================================
 

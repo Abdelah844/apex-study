@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · MIS NOTAS
+// APIX STUDY · MIS NOTAS
 // Cada nota: { id, asignatura, nombre, nota, porcentaje, examenId }
 //   nota: de 0 a 10
 //   porcentaje: cuánto cuenta en la nota final (ej: 30 = 30 %).

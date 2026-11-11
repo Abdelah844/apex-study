@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · DATOS, FECHAS Y CÁLCULOS
+// APIX STUDY · DATOS, FECHAS Y CÁLCULOS
 // Lo que se guarda en el móvil, cómo se cargan y guardan los datos,
 // las ayudas de fechas, los cálculos (racha, minutos...) y las asignaturas.
 // No toca la pantalla: por eso se puede probar sin navegador (test/correr.js).

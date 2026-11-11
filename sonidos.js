@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · SONIDOS PARA CONCENTRARSE
+// APIX STUDY · SONIDOS PARA CONCENTRARSE
 // No usamos archivos de audio: el sonido se "fabrica" en el momento
 // con la Web Audio API a partir de ruido (como el de una tele sin señal),
 // filtrado para que suene a lluvia, a olas o a un zumbido suave.

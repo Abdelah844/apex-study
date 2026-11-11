@@ -1,6 +1,6 @@
 // =====================================================
-// APEX STUDY · APIX, LA MASCOTA (versión estudio)
-// Es el mismo Apix de Apex Gym, pero con gafas y libro cuando estudia.
+// APIX STUDY · APIX, LA MASCOTA (versión estudio)
+// Es el mismo Apix de Apix Gym, pero con gafas y libro cuando estudia.
 // - apixSVG(humor) lo dibuja según el humor.
 // - estadoMascota() decide qué humor y qué mensaje tiene en Inicio.
 // =====================================================
@@ -128,7 +128,7 @@ function estadoMascota() {
 }
 
 // ---------- Dibujo de Apix ----------
-// Bolita suave morada con brillo, bracitos y patitas (igual que en Apex Gym).
+// Bolita suave morada con brillo, bracitos y patitas (igual que en Apix Gym).
 // Humores: contento, estudia, anima, enfadado, celebra, campeon, descanso, cuida
 function apixSVG(humor, tam) {
   const h = humor || "contento";
@@ -145,7 +145,7 @@ function apixSVG(humor, tam) {
   const tinta = "#1F2B2B";
   const id = "as-" + h;   // id del degradado (uno por humor)
 
-  let s = '<svg class="apix apix-' + h + ' ' + (tam || "") + '" viewBox="0 -16 120 136" role="img" aria-label="Apix, la mascota de Apex Study">';
+  let s = '<svg class="apix apix-' + h + ' ' + (tam || "") + '" viewBox="0 -16 120 136" role="img" aria-label="Apix, la mascota de Apix Study">';
   s += '<defs><radialGradient id="' + id + '" cx="40%" cy="30%" r="80%">' +
        '<stop offset="0" stop-color="' + claro + '"/><stop offset=".6" stop-color="' + medio + '"/><stop offset="1" stop-color="' + borde + '"/></radialGradient></defs>';
 

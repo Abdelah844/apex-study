@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · AJUSTES
+// APIX STUDY · AJUSTES
 // Copia de seguridad, recordatorios, modo claro/oscuro y la hoja de Ajustes.
 // =====================================================
 
@@ -51,7 +51,7 @@ function importarDatos(archivo) {
       irA("inicio");
       toast("📂 Copia recuperada");
     } catch (e) {
-      toast("Ese archivo no es una copia de Apex Study");
+      toast("Ese archivo no es una copia de Apix Study");
     }
   };
   lector.readAsText(archivo);

@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · HORARIO SEMANAL
+// APIX STUDY · HORARIO SEMANAL
 // Cada bloque del horario es algo que se repite todas las semanas:
 //   { id, titulo, tipo, asignatura, dia, inicio, fin }
 //   dia: 0 = lunes ... 6 = domingo · inicio y fin: "16:00"

@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
-  "name": "Apex Study",
-  "short_name": "Apex Study",
+  "name": "Apix Study",
+  "short_name": "Apix Study",
   "description": "Estudia concentrado, apunta tus exámenes y cumple tu palabra con Apix.",
   "lang": "es-ES",
   "start_url": "./index.html",

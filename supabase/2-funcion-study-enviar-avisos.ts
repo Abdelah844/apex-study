@@ -1,7 +1,7 @@
 // =====================================================
-// APEX STUDY · FUNCIÓN "study-enviar-avisos"
+// APIX STUDY · FUNCIÓN "study-enviar-avisos"
 // Va en Supabase → Edge Functions (con "Verify JWT" apagado).
-// Tiene un nombre distinto a la de Apex Gym ("enviar-avisos") porque
+// Tiene un nombre distinto a la de Apix Gym ("enviar-avisos") porque
 // las dos apps comparten el mismo proyecto de Supabase.
 //
 // - GET  ...?clave=1  → devuelve la clave pública de avisos (la usa la app)

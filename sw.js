@@ -1,12 +1,12 @@
 // =====================================================
-// APEX STUDY · SERVICE WORKER
+// APIX STUDY · SERVICE WORKER
 // Programa que el navegador ejecuta aparte de la página.
 // Guarda una copia de la app en el móvil para que funcione SIN internet
 // y es quien muestra los avisos de Apix.
 // Si cambias algún archivo, sube el número de VERSION.
 // =====================================================
 
-const VERSION = "apex-study-3.3.0";
+const VERSION = "apex-study-3.3.1";
 
 const ARCHIVOS = [
   "./", "./index.html", "./privacidad.html", "./manifest.json", "./rangos.js", "./planificador.js", "./app.js", "./datos.js", "./pantallas.js", "./formularios.js", "./ajustes.js", "./sesion.js", "./avisos.js",
@@ -52,7 +52,7 @@ self.addEventListener("fetch", function (evento) {
 self.addEventListener("push", function (evento) {
   let datos = {};
   try { datos = evento.data.json(); } catch (e) { datos = { cuerpo: evento.data ? evento.data.text() : "" }; }
-  evento.waitUntil(self.registration.showNotification(datos.titulo || "Apex Study", {
+  evento.waitUntil(self.registration.showNotification(datos.titulo || "Apix Study", {
     body: datos.cuerpo || "",
     icon: "iconos/icono-192.png",
     badge: "iconos/icono-192.png",

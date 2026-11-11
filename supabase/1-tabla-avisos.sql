@@ -1,5 +1,5 @@
 -- =====================================================
--- APEX STUDY · AVISOS PUSH (paso 1)
+-- APIX STUDY · AVISOS PUSH (paso 1)
 -- Pega todo esto en Supabase → SQL Editor → Run.
 -- Crea la tabla donde se guardan los avisos pendientes
 -- y dos funciones que la app usa para programarlos o cancelarlos.

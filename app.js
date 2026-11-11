@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · BOTONES Y ARRANQUE
+// APIX STUDY · BOTONES Y ARRANQUE
 // Este archivo se carga el último: une los botones de todos los archivos
 // y arranca la app. Orden de carga: mira las etiquetas <script> de index.html.
 // =====================================================

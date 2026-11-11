@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · PRUEBAS AUTOMÁTICAS
+// APIX STUDY · PRUEBAS AUTOMÁTICAS
 // Comprueban que los cálculos de la app dan lo que tienen que dar.
 // Se ejecutan con:  node test/correr.js
 // Cada prueba empieza con datos vacíos (no toca tus datos reales).

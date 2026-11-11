@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · RANGOS Y EXPERIENCIA (XP)
+// APIX STUDY · RANGOS Y EXPERIENCIA (XP)
 // Estudiar da XP y con la XP subes de rango (como en los videojuegos).
 // - La XP se calcula a partir de tu historial (sesiones, planes, tarjetas),
 //   así que lo que ya habías estudiado también cuenta.

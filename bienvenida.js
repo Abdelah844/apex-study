@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · BIENVENIDA Y EFECTOS
+// APIX STUDY · BIENVENIDA Y EFECTOS
 // - La primera vez que abres la app, Apix te presenta la app en 4 pasos.
 // - confeti() y vibrar() dan alegría cuando consigues algo.
 // =====================================================
@@ -22,7 +22,7 @@ function pintarBienvenida() {
 
   if (pasoBienvenida === 1) {
     html = apixSVG("contento", "xl") +
-      '<p class="label">Apex Study</p><h1>¡Hola! Soy Apix</h1>' +
+      '<p class="label">Apix Study</p><h1>¡Hola! Soy Apix</h1>' +
       '<p>Estaré aquí para que cumplas tus objetivos: te ayudo a organizarte y a estudiar concentrado.</p>' +
       '<label class="f" style="width:100%;text-align:left">¿Cómo te llamas?<input id="biNombre" maxlength="20" placeholder="Tu nombre" value="' + esc(estado.nombre || "") + '"></label>' +
       '<button class="btn" data-act="bienvenida-siguiente">Siguiente</button>';

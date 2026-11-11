@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · TARJETAS DE REPASO
+// APIX STUDY · TARJETAS DE REPASO
 // Cada tarjeta: { id, asignatura, pregunta, respuesta, caja, proxima }
 //
 // Usamos el "sistema Leitner" (repetición espaciada):

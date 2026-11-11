@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · PANTALLAS
+// APIX STUDY · PANTALLAS
 // Dibuja cada pestaña: Inicio, Estudiar, Agenda, Calendario y Progreso.
 // =====================================================
 
@@ -95,7 +95,7 @@ function pintarInicio() {
   const planes = proximosPlanes().slice(0, 3);
 
   $("app").innerHTML = '<div class="stack">' +
-    cabecera(estado.nombre ? "Hola, " + esc(estado.nombre) : "Apex Study", fechaLarga(hoy())) +
+    cabecera(estado.nombre ? "Hola, " + esc(estado.nombre) : "Apix Study", fechaLarga(hoy())) +
     tarjetaApix(apix.humor, "Apix", apix.mensaje, botonApix) +
     '<div class="card hero stack tight">' +
       '<div class="grid3">' +
@@ -150,7 +150,7 @@ function pintarEstudiar() {
     '<div class="card stack tight"><h3>📵 Bloquea las redes sociales</h3>' +
       '<p class="muted">Una web no puede bloquear otras apps, pero Android sí. Antes de empezar:</p>' +
       '<p class="small">1. Abre <b>Ajustes</b> → <b>Bienestar digital y controles parentales</b>.<br>2. Pulsa <b>Modo concentración</b>.<br>3. Marca Instagram, TikTok… y pulsa <b>Activar ahora</b>.</p>' +
-      '<p class="muted small">Además, si sales de Apex Study mientras estudias, Apix se enfada y lo apunta.</p>' +
+      '<p class="muted small">Además, si sales de Apix Study mientras estudias, Apix se enfada y lo apunta.</p>' +
     '</div></div>';
 }
 

@@ -1,5 +1,5 @@
 // =====================================================
-// Ejecuta las pruebas de Apex Study sin navegador.
+// Ejecuta las pruebas de Apix Study sin navegador.
 // Uso (desde la carpeta del proyecto):  node test/correr.js
 // Devuelve código de salida 1 si alguna prueba falla.
 // =====================================================

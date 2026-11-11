@@ -1,5 +1,5 @@
 // =====================================================
-// APEX STUDY · PLANIFICADOR DE APIX
+// APIX STUDY · PLANIFICADOR DE APIX
 // 1. Plan automático: al apuntar un examen, Apix reparte sesiones de repaso
 //    en los días de antes (10, 7, 4, 2 y 1 día antes).
 // 2. ¿Qué estudio hoy?: Apix mira exámenes, deberes, planes y tarjetas

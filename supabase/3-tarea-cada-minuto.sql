@@ -1,5 +1,5 @@
 -- =====================================================
--- APEX STUDY · CONFIGURACIÓN Y TAREA CADA MINUTO (paso 3)
+-- APIX STUDY · CONFIGURACIÓN Y TAREA CADA MINUTO (paso 3)
 -- Pega esto en Supabase → SQL Editor → Run.
 -- =====================================================
 
