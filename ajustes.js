@@ -10,7 +10,7 @@ function exportarDatos() {
   const archivo = new Blob([texto], { type: "application/json" });
   const enlace = document.createElement("a");
   enlace.href = URL.createObjectURL(archivo);
-  enlace.download = "apex-study-copia-" + hoy() + ".json";
+  enlace.download = "apix-study-copia-" + hoy() + ".json";
   document.body.appendChild(enlace);
   enlace.click();
   enlace.remove();
