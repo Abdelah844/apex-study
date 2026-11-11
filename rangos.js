@@ -4,7 +4,6 @@
 // - La XP se calcula a partir de tu historial (sesiones, planes, tarjetas),
 //   así que lo que ya habías estudiado también cuenta.
 // - Cada rango tiene 3 divisiones: III (la más baja), II y I. Apex no tiene.
-// - Cada alumno elige los nombres: de videojuego o de estudio.
 // =====================================================
 
 // Cuánta XP da cada cosa
@@ -19,13 +18,13 @@ const XP = {
 };
 
 const RANGOS = [
-  { xp: 0,     icono: "🥉", juego: "Bronce",   estudio: "Novato",     color: "#C47A45" },
-  { xp: 300,   icono: "🥈", juego: "Plata",    estudio: "Aprendiz",   color: "#9AA3B5" },
-  { xp: 900,   icono: "🥇", juego: "Oro",      estudio: "Estudiante", color: "#E8B520" },
-  { xp: 2400,  icono: "💠", juego: "Platino",  estudio: "Experto",    color: "#3FC1C9" },
-  { xp: 4800,  icono: "💎", juego: "Diamante", estudio: "Sabio",      color: "#4DB8FF" },
-  { xp: 9000,  icono: "👑", juego: "Maestro",  estudio: "Genio",      color: "#B06DFF" },
-  { xp: 18000, icono: "🔥", juego: "Apex",     estudio: "Apex",       color: "#FF6B3D" }
+  { xp: 0,     icono: "🥉", nombre: "Bronce",   color: "#C47A45" },
+  { xp: 300,   icono: "🥈", nombre: "Plata",    color: "#9AA3B5" },
+  { xp: 900,   icono: "🥇", nombre: "Oro",      color: "#E8B520" },
+  { xp: 2400,  icono: "💠", nombre: "Platino",  color: "#3FC1C9" },
+  { xp: 4800,  icono: "💎", nombre: "Diamante", color: "#4DB8FF" },
+  { xp: 9000,  icono: "👑", nombre: "Maestro",  color: "#B06DFF" },
+  { xp: 18000, icono: "🔥", nombre: "Apex",     color: "#FF6B3D" }
 ];
 const DIVISIONES = ["III", "II", "I"];
 
@@ -75,7 +74,7 @@ function xpTotal() {
 
 // ---------- Rangos ----------
 function nombreRango(i) {
-  return estado.estiloRangos === "estudio" ? RANGOS[i].estudio : RANGOS[i].juego;
+  return RANGOS[i].nombre;
 }
 
 // Todos los escalones: Bronce III, Bronce II, Bronce I, Plata III... y Apex
@@ -176,16 +175,8 @@ function presentarRangos() {
   mostrarCapa('<div class="msg">' + apixSVG("campeon", "lg") + '<p class="label">¡Novedad!</p><h1>Rangos</h1>' +
     '<p>Ahora estudiar te da <b>XP</b> y con la XP subes de rango. Lo que ya habías estudiado también cuenta.</p>' +
     '<p class="big-num">' + r.icono + ' ' + r.nombre + '</p>' +
-    '<p class="muted small">¿Qué nombres prefieres? Lo puedes cambiar en Ajustes.</p>' +
-    '<div class="seg" style="width:100%">' + botonesEstilo() + '</div>' +
     '<button class="btn" data-act="ver-rangos">Ver todos los rangos</button>' +
     '<button class="btn-txt" data-act="cerrar-capa">Cerrar</button></div>');
-}
-
-function botonesEstilo() {
-  const estilo = estado.estiloRangos || "juego";
-  return '<button class="' + (estilo === "juego" ? "on" : "") + '" data-act="estilo-rangos" data-e="juego">🎮 Bronce, Plata…</button>' +
-    '<button class="' + (estilo === "estudio" ? "on" : "") + '" data-act="estilo-rangos" data-e="estudio">📚 Novato, Aprendiz…</button>';
 }
 
 // Después de ganar XP: ¿has subido? Devuelve el texto para celebrarlo (o "")
@@ -206,13 +197,5 @@ function contarRepaso() {
 
 // ---------- Botones ----------
 const ACCIONES_RANGOS = {
-  "ver-rangos": function () { abrirRangos(); },
-  "estilo-rangos": function (b) {
-    estado.estiloRangos = b.dataset.e;
-    guardar();
-    pintar();
-    // Repinta lo que esté abierto (presentación o Ajustes)
-    if (!$("capa").hidden) presentarRangos();
-    if (!$("hoja").hidden) hojaAjustes();
-  }
+  "ver-rangos": function () { abrirRangos(); }
 };

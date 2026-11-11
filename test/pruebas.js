@@ -478,12 +478,6 @@ prueba("Rangos", "cuánto falta y la barra", function () {
   igual([r.siguiente, r.falta, r.porcentaje], ["Bronce I", 50, 50]);
   igual(rangoDe(18000).falta, 0, "en Apex no falta nada");
 });
-prueba("Rangos", "con nombres de estudio", function () {
-  estado.estiloRangos = "estudio";
-  igual(rangoDe(0).nombre, "Novato III");
-  igual(rangoDe(1000).nombre, "Estudiante III");
-  igual(rangoDe(18000).nombre, "Apex");
-});
 prueba("Rangos", "historial: el día en que conseguiste cada rango", function () {
   sesionDia("2026-11-01", 200, 1);
   sesionDia("2026-11-02", 200, 1);   // aquí pasas de 300: Plata
