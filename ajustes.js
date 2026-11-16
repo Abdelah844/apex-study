@@ -121,7 +121,7 @@ function hojaAjustes() {
   if (permiso === "granted") avisos = '<p class="small">✓ Avisos activados</p><div class="dos"><button class="btn-sec" data-act="probar-aviso">Probar aviso</button>' +
     '<button class="btn-sec" data-act="diagnostico-avisos">Probar con la app cerrada</button></div>';
   else if (permiso === "denied") avisos = '<p class="muted small">Has bloqueado los avisos. Actívalos en los ajustes del navegador para esta página.</p>';
-  else if (permiso === "no") avisos = '<p class="muted small">Este navegador no permite avisos. En iPhone, primero añade la app a la pantalla de inicio.</p>';
+  else if (permiso === "no") avisos = '<p class="muted small">Este navegador no permite avisos.</p>';
   else avisos = '<button class="btn" data-act="activar-avisos">Activar avisos de Apix</button>';
 
   // Qué estudias
@@ -170,12 +170,7 @@ function hojaAjustes() {
 }
 
 
-// Pasos para instalar la app. En iPhone es obligatorio para que lleguen los avisos.
+// Pasos para instalar la app en Android
 function pasosInstalar() {
-  if (/iPhone|iPad/.test(navigator.userAgent)) {
-    return '<p class="small">En iPhone los avisos <b>solo llegan si instalas la app</b>:</p>' +
-      '<p class="small">1. Abre esta página en <b>Safari</b>.<br>2. Pulsa el botón <b>Compartir</b> (el cuadrado con la flecha).<br>' +
-      '3. Elige <b>Añadir a pantalla de inicio</b>.<br>4. Abre Apix Study desde el icono nuevo y activa los avisos.</p>';
-  }
   return '<p class="small">1. Abre esta página en <b>Chrome</b>.<br>2. Pulsa el menú <b>⋮</b>.<br>3. Elige <b>Instalar aplicación</b>.</p>';
 }

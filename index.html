@@ -188,7 +188,6 @@ input[type=date], input[type=time] { -webkit-appearance: none; appearance: none;
 .necesitas { background: var(--surface2); border-radius: 10px; padding: 9px 11px; }
 .tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .tres .btn-sec { padding: 10px 4px; }
-.cal .puntos .d { background: var(--warn); }
 .anillo.descanso .avance { stroke: var(--good); }
 
 /* ===== TARJETAS DE REPASO ===== */
@@ -258,14 +257,17 @@ button:active { transform: scale(.97); }
 .cal button.fuera { opacity: .3; }
 .cal button.hoy { outline: 2px solid var(--fg); outline-offset: -2px; }
 .cal button.sel { background: var(--accent); color: var(--on-accent); }
-.cal .puntos { display: flex; gap: 3px; height: 6px; }
-.cal .puntos i { width: 6px; height: 6px; border-radius: 50%; }
-.cal .puntos .e { background: var(--exam); }
-.cal .puntos .p { background: var(--fire); }
-.cal .puntos .s { background: var(--good); }
+/* Marcas del calendario: cada tipo tiene su color Y su forma, para distinguirlas de un vistazo */
+.cal .puntos { display: flex; gap: 3px; height: 8px; align-items: center; }
+.cal .puntos i, .leyenda i { display: inline-block; width: 8px; height: 8px; flex: none; }
+.leyenda i { width: 10px; height: 10px; margin-right: 6px; }
+.marca-e { background: #E03131; border-radius: 50%; }                       /* examen: círculo rojo */
+.marca-d { background: #228BE6; border-radius: 2px; }                       /* entrega: cuadrado azul */
+.marca-p { background: #F59F00; border-radius: 1px; transform: rotate(45deg) scale(.85); }   /* plan: rombo amarillo */
+.marca-s { background: #12B886; border-radius: 50%; }                       /* estudiaste: círculo verde */
 .cal button.sel .puntos i { box-shadow: 0 0 0 1.5px var(--surface); }
-.leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); font-weight: 700; }
-.leyenda i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.leyenda { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); font-weight: 700; }
+.leyenda span { display: inline-flex; align-items: center; }
 
 /* ===== GRÁFICA DE LA SEMANA ===== */
 .grafica { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 140px; }

@@ -157,8 +157,7 @@ function pintarEstudiar() {
     (planesHoy.length ? '<div class="card"><h2>Tus planes de hoy</h2><div class="list">' + planesHoy.map(function (p) { return filaPlan(p, true); }).join("") + '</div></div>' : '') +
     '<div class="card stack tight"><h3>📵 Modo concentración</h3>' +
       '<p class="muted">Apix Study no puede bloquear otras apps, pero tu móvil sí. Antes de empezar:</p>' +
-      '<p class="small"><b>Android:</b> Ajustes → Bienestar digital y controles parentales → Modo concentración. Marca Instagram, TikTok… y pulsa Activar ahora.</p>' +
-      '<p class="small"><b>iPhone:</b> Ajustes → Tiempo de uso → pon un límite a las apps que te distraen.</p>' +
+      '<p class="small">1. Abre <b>Ajustes</b> → <b>Bienestar digital y controles parentales</b>.<br>2. Pulsa <b>Modo concentración</b>.<br>3. Marca Instagram, TikTok… y pulsa <b>Activar ahora</b>.</p>' +
       '<p class="muted small">Además, si sales de Apix Study mientras estudias, Apix se enfada y lo apunta.</p>' +
     '</div></div>';
 }
@@ -217,10 +216,10 @@ function pintarCalendario() {
     if (dia === hoy()) clases += " hoy";
     if (dia === diaSel) clases += " sel";
     let puntos = "";
-    if (estado.examenes.some(function (e) { return e.fecha === dia; })) puntos += '<i class="e"></i>';
-    if (estado.planes.some(function (p) { return p.fecha === dia; })) puntos += '<i class="p"></i>';
-    if (estado.deberes.some(function (x) { return x.fecha === dia && !x.hecho; })) puntos += '<i class="d"></i>';
-    if (minutosDelDia(dia) > 0) puntos += '<i class="s"></i>';
+    if (estado.examenes.some(function (e) { return e.fecha === dia; })) puntos += '<i class="marca-e"></i>';
+    if (estado.planes.some(function (p) { return p.fecha === dia; })) puntos += '<i class="marca-p"></i>';
+    if (estado.deberes.some(function (x) { return x.fecha === dia && !x.hecho; })) puntos += '<i class="marca-d"></i>';
+    if (minutosDelDia(dia) > 0) puntos += '<i class="marca-s"></i>';
     celdas += '<button class="' + clases + '" data-act="dia" data-dia="' + dia + '">' + d.getDate() + '<span class="puntos">' + puntos + '</span></button>';
     dia = sumarDias(dia, 1);
     // Si ya hemos pasado el mes y la semana está completa, paramos
@@ -252,7 +251,7 @@ function pintarCalendario() {
       '<div class="row between"><button class="icon-btn" data-act="mes" data-n="-1" aria-label="Mes anterior">‹</button>' +
       '<h2>' + titulo + '</h2><button class="icon-btn" data-act="mes" data-n="1" aria-label="Mes siguiente">›</button></div>' +
       '<div class="cal">' + celdas + '</div>' +
-      '<div class="leyenda"><span><i style="background:var(--exam)"></i>Examen</span><span><i style="background:var(--warn)"></i>Entrega</span><span><i style="background:var(--fire)"></i>Plan de estudio</span><span><i style="background:var(--good)"></i>Estudiaste</span></div>' +
+      '<div class="leyenda"><span><i class="marca-e"></i>Examen</span><span><i class="marca-d"></i>Entrega</span><span><i class="marca-p"></i>Plan</span><span><i class="marca-s"></i>Estudiaste</span></div>' +
     '</div>' + detalle + '</div>';
 }
 

@@ -120,8 +120,6 @@ async function diagnosticoAvisos() {
   }
 
   if (!paso(permisoAvisos() === "granted", "Permiso de avisos: " + permisoAvisos())) return;
-  const esIphone = /iPhone|iPad/.test(navigator.userAgent);
-  if (esIphone && !paso(appInstalada(), "En iPhone hay que abrirla desde el icono de la pantalla de inicio")) return;
   if (!paso("serviceWorker" in navigator && "PushManager" in window, "El móvil admite avisos push")) return;
 
   let sub;
@@ -144,7 +142,7 @@ async function diagnosticoAvisos() {
     });
     paso(true, "Aviso de prueba guardado en Supabase para las " + cuando.toTimeString().slice(0, 5));
     paso(true, "Ahora CIERRA la app del todo. Llegará en 1 o 2 minutos.");
-    if (esIphone) paso(true, "Si tienes el ahorro de batería activado, puede tardar un poco más.");
+    paso(true, "Si tienes el ahorro de batería activado, puede tardar un poco más.");
   } catch (e) {
     paso(false, "No se pudo guardar en Supabase → " + e.message);
   }
