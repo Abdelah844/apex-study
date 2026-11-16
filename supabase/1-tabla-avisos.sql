@@ -47,6 +47,10 @@ begin
   if (select count(*) from study_avisos where endpoint = p_endpoint and not enviado) >= 200 then
     raise exception 'Demasiados avisos pendientes';
   end if;
+  -- Máximo 20.000 avisos pendientes entre todos los móviles (para que nadie llene el servidor)
+  if (select count(*) from study_avisos where not enviado) >= 20000 then
+    raise exception 'El servidor de avisos está lleno';
+  end if;
 
   insert into study_avisos (endpoint, suscripcion, plan_id, cuando, titulo, cuerpo)
   values (p_endpoint, p_suscripcion, p_plan, p_cuando, p_titulo, p_cuerpo)

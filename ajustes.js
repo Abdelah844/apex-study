@@ -157,8 +157,7 @@ function hojaAjustes() {
     tarjetaRecordatorios() +
     '<div class="card stack tight"><h3>Avisos</h3><p class="muted small">Apix te avisará cuando llegue la hora de empezar a estudiar.</p>' + avisos + '</div>' +
     // Cómo instalarla: solo sale si aún la usas desde el navegador
-    (appInstalada() ? '' : '<div class="card stack tight"><h3>Instalar en el móvil</h3>' +
-      '<p class="muted small">En Android (Chrome): menú ⋮ → «Instalar aplicación». En iPhone (Safari): Compartir → «Añadir a pantalla de inicio».</p></div>') +
+    (appInstalada() ? '' : '<div class="card stack tight"><h3>Instalar en el móvil</h3>' + pasosInstalar() + '</div>') +
     '<div class="card stack tight"><h3>Tus datos</h3><p class="muted small">Se guardan solo en este móvil. Haz una copia de vez en cuando por si lo cambias o se borra.</p>' +
       '<p class="small">' + ((estado.copia || {}).ultima ? "💾 Última copia: " + fechaLarga(estado.copia.ultima) : "⚠️ Aún no has hecho ninguna copia") + '</p>' +
       '<button class="interruptor ' + ((estado.copia || {}).noRecordar ? "" : "on") + '" data-act="copia-recordar"><span>Recordarme hacer copia cada mes</span><i></i></button>' +
@@ -166,6 +165,17 @@ function hojaAjustes() {
       '<button class="btn-sec" data-act="importar">📂 Recuperar copia</button></div>' +
       '<input type="file" id="archivoCopia" accept=".json,application/json" hidden>' +
       '<button class="btn-sec btn-danger" data-act="borrar-todo">Borrar todos los datos</button></div>' +
+    '<a class="btn-sec full" href="mailto:apixgymsoporte@gmail.com?subject=' + encodeURIComponent("Opinión sobre Apix Study") + '" style="text-align:center;text-decoration:none">💬 Enviar opinión o avisar de un fallo</a>' +
     '<a class="btn-txt" href="privacidad.html" target="_blank" rel="noopener" style="text-align:center">🛡️ Política de privacidad</a>');
 }
 
+
+// Pasos para instalar la app. En iPhone es obligatorio para que lleguen los avisos.
+function pasosInstalar() {
+  if (/iPhone|iPad/.test(navigator.userAgent)) {
+    return '<p class="small">En iPhone los avisos <b>solo llegan si instalas la app</b>:</p>' +
+      '<p class="small">1. Abre esta página en <b>Safari</b>.<br>2. Pulsa el botón <b>Compartir</b> (el cuadrado con la flecha).<br>' +
+      '3. Elige <b>Añadir a pantalla de inicio</b>.<br>4. Abre Apix Study desde el icono nuevo y activa los avisos.</p>';
+  }
+  return '<p class="small">1. Abre esta página en <b>Chrome</b>.<br>2. Pulsa el menú <b>⋮</b>.<br>3. Elige <b>Instalar aplicación</b>.</p>';
+}

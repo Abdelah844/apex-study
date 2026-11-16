@@ -65,6 +65,9 @@ function filaPlan(p, conBotones) {
     botones += '<button class="btn-sec btn-danger" data-act="borrar-plan" data-id="' + p.id + '">Borrar</button>';
   } else if (!p.hecho && !esPlanEstudio(p)) {
     botones = botonPlan(p, "");   // aunque ya haya pasado, puedes marcarlo como hecho
+  } else if (!p.hecho) {
+    // Plan antiguo de estudio sin cumplir: quizá era otra cosa (cargar los cascos...)
+    botones = '<button class="btn-sec" data-act="plan-a-otro" data-id="' + p.id + '">No era de estudiar</button>';
   }
   return '<div class="item"><div class="dia-caja"><b>' + p.hora + '</b><span>' + (p.fecha === hoy() ? "hoy" : fechaCorta(p.fecha)) + '</span></div>' +
     '<div class="grow"><span class="name">' + esc(p.objetivo) + '</span>' +
@@ -105,20 +108,23 @@ function pintarInicio() {
         '<div><p class="label">Hoy</p><p class="big-num num">' + minutosDelDia(hoy()) + '</p><p class="muted small">minutos</p></div>' +
         '<div><p class="label">Exámenes</p><p class="big-num num">' + proximosExamenes().length + '</p><p class="muted small">por hacer</p></div>' +
       '</div>' +
-      bloqueRango() +   // rangos.js
-      '<div class="week" style="margin-top:8px">' + semana + '</div>' +
-      '<button class="btn-txt protector" data-act="info-protector">' + (protectorDisponible() ? "🛡️ Protector de racha: te queda 1 esta semana" : "🛡️ Protector de racha: ya usado esta semana") + '</button>' +
       '<button class="btn" data-act="ir" data-tab="estudiar" style="margin-top:10px">Empezar a estudiar</button>' +
       '<button class="btn-sec full" data-act="que-estudio">🤔 ¿Qué estudio hoy?</button>' +
     '</div>' +
     tarjetaHorarioHoy() +
     tarjetaDeberesInicio() +
-    '<div class="card"><div class="row between"><h2>Planes de estudio</h2><button class="btn-txt" data-act="nuevo-plan">+ Nuevo</button></div>' +
+    '<div class="card"><div class="row between"><h2>Planes</h2><button class="btn-txt" data-act="nuevo-plan">+ Nuevo</button></div>' +
       '<div class="list">' + (planes.length ? planes.map(function (p) { return filaPlan(p, true); }).join("") :
-        '<p class="vacio">¿Cuándo vas a empezar a estudiar? Ponle fecha y hora, y Apix te avisará.</p>') + '</div></div>' +
+        '<p class="vacio">¿Cuándo vas a estudiar? Ponle fecha y hora, y Apix te avisará.</p>') + '</div></div>' +
     '<div class="card"><div class="row between"><h2>Próximos exámenes</h2><button class="btn-txt" data-act="nuevo-examen">+ Nuevo</button></div>' +
       '<div class="list">' + (examenes.length ? examenes.map(function (e) { return filaExamen(e, false); }).join("") :
         '<p class="vacio">Apunta tus exámenes para no llevarte sustos.</p>') + '</div></div>' +
+    // Tu progreso: rango, semana y protector (abajo, para que arriba quede solo lo de hoy)
+    '<div class="card stack tight"><h2>Tu progreso</h2>' +
+      bloqueRango() +   // rangos.js
+      '<div class="week" style="margin-top:8px">' + semana + '</div>' +
+      '<button class="btn-txt protector" data-act="info-protector">' + (protectorDisponible() ? "🛡️ Protector de racha: te queda 1 esta semana" : "🛡️ Protector de racha: ya usado esta semana") + '</button>' +
+    '</div>' +
     '</div>';
 }
 
@@ -149,9 +155,10 @@ function pintarEstudiar() {
       '<button class="btn" data-act="empezar">Empezar a estudiar</button>' +
     '</div>' +
     (planesHoy.length ? '<div class="card"><h2>Tus planes de hoy</h2><div class="list">' + planesHoy.map(function (p) { return filaPlan(p, true); }).join("") + '</div></div>' : '') +
-    '<div class="card stack tight"><h3>📵 Bloquea las redes sociales</h3>' +
-      '<p class="muted">Una web no puede bloquear otras apps, pero Android sí. Antes de empezar:</p>' +
-      '<p class="small">1. Abre <b>Ajustes</b> → <b>Bienestar digital y controles parentales</b>.<br>2. Pulsa <b>Modo concentración</b>.<br>3. Marca Instagram, TikTok… y pulsa <b>Activar ahora</b>.</p>' +
+    '<div class="card stack tight"><h3>📵 Modo concentración</h3>' +
+      '<p class="muted">Apix Study no puede bloquear otras apps, pero tu móvil sí. Antes de empezar:</p>' +
+      '<p class="small"><b>Android:</b> Ajustes → Bienestar digital y controles parentales → Modo concentración. Marca Instagram, TikTok… y pulsa Activar ahora.</p>' +
+      '<p class="small"><b>iPhone:</b> Ajustes → Tiempo de uso → pon un límite a las apps que te distraen.</p>' +
       '<p class="muted small">Además, si sales de Apix Study mientras estudias, Apix se enfada y lo apunta.</p>' +
     '</div></div>';
 }

@@ -17,10 +17,18 @@ const XP = {
   maxDia: 300       // como mucho se gana esto al día (sin contar los bonus)
 };
 
+// Medalla dibujada (los emojis 🥇🥈🥉 llevan un número y confunden con las divisiones)
+function medallaSVG(color) {
+  return '<svg class="ico-rango" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M7 2h4l2 7H9z" fill="#6D4BFF"/><path d="M17 2h-4l-2 7h4z" fill="#9B7EFF"/>' +
+    '<circle cx="12" cy="15" r="7" fill="' + color + '"/>' +
+    '<circle cx="12" cy="15" r="4.2" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4"/></svg>';
+}
+
 const RANGOS = [
-  { xp: 0,     icono: "🥉", nombre: "Bronce",   color: "#C47A45" },
-  { xp: 300,   icono: "🥈", nombre: "Plata",    color: "#9AA3B5" },
-  { xp: 900,   icono: "🥇", nombre: "Oro",      color: "#E8B520" },
+  { xp: 0,     icono: medallaSVG("#C47A45"), nombre: "Bronce",   color: "#C47A45" },
+  { xp: 300,   icono: medallaSVG("#9AA3B5"), nombre: "Plata",    color: "#9AA3B5" },
+  { xp: 900,   icono: medallaSVG("#E8B520"), nombre: "Oro",      color: "#E8B520" },
   { xp: 2400,  icono: "💠", nombre: "Platino",  color: "#3FC1C9" },
   { xp: 4800,  icono: "💎", nombre: "Diamante", color: "#4DB8FF" },
   { xp: 9000,  icono: "👑", nombre: "Maestro",  color: "#B06DFF" },

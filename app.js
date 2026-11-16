@@ -133,6 +133,16 @@ const ACCIONES = {
   },
   "guardar-plan": function (b) { guardarPlan(Number(b.dataset.min), b.dataset.id); },
   "tipo-plan": function (b) { cambiarTipoPlan(b.dataset.t); },
+  "plan-a-otro": function (b) {
+    const p = estado.planes.find(function (x) { return x.id === b.dataset.id; });
+    if (!p) return;
+    p.tipo = "otro";      // deja de contar como estudio
+    p.asignatura = "";
+    p.min = 0;
+    guardar();
+    pintar();
+    toast("Cambiado a «otra cosa»");
+  },
   "plan-hecho": function (b) {
     const p = estado.planes.find(function (x) { return x.id === b.dataset.id; });
     if (!p) return;

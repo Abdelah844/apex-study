@@ -486,7 +486,7 @@ prueba("Rangos", "historial: el día en que conseguiste cada rango", function ()
 prueba("Rangos", "detecta cuando subes (y solo una vez)", function () {
   estado.rangoVisto = 0;
   sesionDia("2026-11-10", 120, 1);
-  igual(comprobarSubida(), "🥉 ¡Subes a Bronce II!");
+  cierto(comprobarSubida().endsWith(" ¡Subes a Bronce II!"));
   igual(comprobarSubida(), "");
 });
 prueba("Rangos", "numeroBonito pone el punto de miles", function () {
