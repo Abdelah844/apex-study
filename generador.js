@@ -6,7 +6,9 @@
 //   2. Busca las palabras importantes (términos que se repiten, fechas, números, nombres).
 //   3. En cada frase quita una palabra clave: "¿Qué palabra falta?".
 //      Las opciones falsas son otras palabras importantes de tus apuntes.
-//   4. Si hay definiciones ("X es..."), pregunta "¿Qué es X?".
+//   4. Si hay definiciones ("X es..."), pregunta "¿Qué es X?" y "¿Qué concepto es este?".
+//   5. También hace verdadero o falso y "¿Cuál de estas afirmaciones es correcta?",
+//      cambiando a propósito una palabra de algunas frases.
 // =====================================================
 
 const MAX_PREGUNTAS = 20;
@@ -25,10 +27,30 @@ const PALABRAS_VACIAS = new Set(("de la que el en y a los del se las por un para
   "permite permiten utiliza utilizan usar usa usan uso sirve sirven existe existen cual cuales cuales donde cómo cuándo").split(" "));
 
 // ---------- 1. Frases ----------
+// En los PDF y en las fotos una frase suele venir cortada en varias líneas: las volvemos a juntar
+function juntarLineas(texto) {
+  const lineas = String(texto || "").replace(/\r/g, "").split("\n");
+  const juntas = [];
+  for (const bruta of lineas) {
+    const linea = bruta.trim();
+    if (!linea) { juntas.push(""); continue; }
+    const anterior = juntas.length ? juntas[juntas.length - 1] : "";
+    const esVineta = /^([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s/.test(linea);
+    const anteriorAcaba = /[.!?:;]$/.test(anterior);
+    const empiezaMinuscula = /^[\p{Ll}0-9(]/u.test(linea);
+    if (anterior && !esVineta && !anteriorAcaba && empiezaMinuscula) {
+      // "palabra-" al final de línea: era una palabra partida
+      juntas[juntas.length - 1] = /-$/.test(anterior) ? anterior.slice(0, -1) + linea : anterior + " " + linea;
+    } else {
+      juntas.push(linea);
+    }
+  }
+  return juntas;
+}
+
 function dividirFrases(texto) {
   const frases = [];
-  const lineas = String(texto || "").replace(/\r/g, "").split("\n");
-  for (let linea of lineas) {
+  for (let linea of juntarLineas(texto)) {
     // Quita viñetas y números de lista: "- ", "• ", "1. ", "a) "
     linea = linea.replace(/^\s*([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s+/, "").trim();
     if (!linea) continue;
@@ -60,7 +82,7 @@ function tipoPalabra(palabra) {
 function claseDe(palabra) {
   const p = palabra.toLowerCase();
   if (/mente$/.test(p)) return "adverbio";
-  if (/(ar|er|ir|ando|iendo|aron|ieron|aban|ían)$/.test(p)) return "verbo";
+  if (/(ar|er|ir|ando|iendo|aron|ieron|aba|aban|ían)$/.test(p)) return "verbo";
   if (/(an|en)$/.test(p) && !/(men|gen)$/.test(p)) return "verbo";   // examen, imagen... son nombres
   return "nombre";
 }
@@ -126,6 +148,7 @@ function opcionesFalsas(respuesta, frase, claves, azar) {
     let distancia = Math.abs(c.texto.length - respuesta.length) / 2;
     if (c.texto.slice(-1) !== respuesta.slice(-1)) distancia += 4;
     if (c.texto.slice(-2) === respuesta.slice(-2)) distancia -= 1;
+    distancia -= Math.min(c.veces, 3) * 0.8;   // las palabras que se repiten suelen ser conceptos del tema
     candidatas.push({ texto: c.texto, orden: distancia + azar() * 3 });
   }
   candidatas.sort(function (a, b) { return a.orden - b.orden; });
@@ -157,7 +180,8 @@ function preguntaHueco(frase, posicion, claves, azar) {
     if (repetida) return;
     // Nombres de varias palabras ("Active Directory"): no se pregunta solo un trozo
     const mayus = function (x) { return x && /^\p{Lu}/u.test(x); };
-    if (mayus(p) && ((i > 1 && mayus(palabras[i - 1])) || mayus(palabras[i + 1]))) return;
+    const anteriorEsNombre = i > 1 ? mayus(palabras[i - 1]) : mayus(palabras[0]) && !PALABRAS_VACIAS.has(palabras[0].toLowerCase());
+    if (mayus(p) && (anteriorEsNombre || mayus(palabras[i + 1]))) return;
     const puntos = c.puntos + azar() * 0.5;
     if (!mejor || puntos > mejor.puntos) mejor = { texto: p, puntos: puntos };
   });
@@ -169,7 +193,11 @@ function preguntaHueco(frase, posicion, claves, azar) {
   const exp = new RegExp("(^|[^\\p{L}\\p{N}])" + escRegex(mejor.texto) + "(?![\\p{L}\\p{N}])", "u");
   const enunciado = frase.replace(exp, "$1" + HUECO);
   if (enunciado === frase) return null;
-  return { tipo: "hueco", enunciado: enunciado, correcta: mejor.texto, falsas: falsas, frase: frase, posicion: posicion, clave: mejor.texto };
+  // ¿Sirve para hacer una frase falsa creíble? Solo si la palabra cambiada encaja (fechas, números, nombres
+  // o palabras que acaban igual, como "dominio" → "directorio")
+  const tipo = tipoPalabra(mejor.texto);
+  const buenCambio = tipo !== "palabra" || falsas[0].slice(-1) === mejor.texto.slice(-1);
+  return { tipo: "hueco", enunciado: enunciado, correcta: mejor.texto, falsas: falsas, frase: frase, posicion: posicion, clave: mejor.texto, buenCambio: buenCambio };
 }
 
 // ---------- 4. Preguntas de definición: "X es ..." ----------
@@ -195,22 +223,83 @@ function terminoEnFrase(termino) {
   return articulo ? termino.charAt(0).toLowerCase() + termino.slice(1) : termino;
 }
 
+// Quita el artículo y pone mayúscula: "el controlador de dominio" → "Controlador de dominio"
+function conceptoLimpio(termino) {
+  const t = termino.replace(/^(el|la|los|las|un|una|unos|unas)\s+/i, "");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+// Dos tipos con las definiciones: "¿Qué es X?" y "¿Qué concepto es este?" (unir concepto y definición)
 function preguntasDefinicion(definiciones, azar) {
   if (definiciones.length < 4) return [];
   return definiciones.map(function (d) {
     const otras = mezclarCon(definiciones.filter(function (x) { return x !== d && x.termino.toLowerCase() !== d.termino.toLowerCase(); }), azar).slice(0, 3);
-    const pregunta = d.verbo === "son" ? "¿Qué son " : "¿Qué es ";
+    const clave = conceptoLimpio(d.termino);
+    const definicion = recortar(d.definicion, 130);
+    if (azar() < 0.5) {
+      return {
+        tipo: "definicion", enunciado: (d.verbo === "son" ? "¿Qué son " : "¿Qué es ") + terminoEnFrase(d.termino) + "?",
+        correcta: definicion, falsas: otras.map(function (o) { return recortar(o.definicion, 130); }),
+        frase: d.frase, resalta: definicion.replace(/…$/, ""), posicion: d.posicion, clave: clave
+      };
+    }
     return {
-      tipo: "definicion",
-      enunciado: pregunta + terminoEnFrase(d.termino) + "?",
-      correcta: recortar(d.definicion, 130),
-      falsas: otras.map(function (o) { return recortar(o.definicion, 130); }),
-      frase: d.frase, posicion: d.posicion, clave: d.termino.replace(/^(el|la|los|las|un|una|unos|unas)\s+/i, "")
+      tipo: "concepto", enunciado: "¿A qué concepto corresponde esta definición? «" + definicion + "»",
+      correcta: clave, falsas: otras.map(function (o) { return conceptoLimpio(o.termino); }),
+      frase: d.frase, resalta: d.termino, posicion: d.posicion, clave: clave
     };
   });
 }
 
+// Una frase de los apuntes con una palabra cambiada por otra (para las afirmaciones falsas)
+function fraseCambiada(h) {
+  return h.enunciado.replace(HUECO, h.falsas[0]);
+}
+
+// Convierte una pregunta de hueco en "verdadero o falso"
+function preguntaVerdaderoFalso(h, verdadera) {
+  const afirmacion = verdadera ? h.frase : fraseCambiada(h);
+  return {
+    tipo: "vf", enunciado: "¿Verdadero o falso? «" + afirmacion + "»",
+    opciones: ["Verdadero", "Falso"], correcta: verdadera ? 0 : 1,
+    frase: h.frase, resalta: h.correcta, posicion: h.posicion, clave: h.clave,
+    tarjeta: { pregunta: "¿Verdadero o falso? «" + afirmacion + "»", respuesta: (verdadera ? "Verdadero" : "Falso") + ". En tus apuntes: «" + h.frase + "»" }
+  };
+}
+
+// Con 4 frases: "¿Cuál es correcta?" (1 real y 3 cambiadas) o "¿Cuál es incorrecta?" (3 reales y 1 cambiada)
+function preguntaAfirmaciones(grupo, azar) {
+  const otrasCambiables = grupo.slice(1).every(function (h) { return h.buenCambio; });
+  let buscaCorrecta = azar() < 0.6;
+  if (buscaCorrecta && !otrasCambiables) buscaCorrecta = false;
+  if (!buscaCorrecta && !grupo[0].buenCambio) buscaCorrecta = true;
+  if (buscaCorrecta && !otrasCambiables) return null;   // no se pueden hacer frases falsas creíbles
+  const principal = grupo[0];   // la frase en la que se fija la respuesta
+  const correcta = buscaCorrecta ? principal.frase : fraseCambiada(principal);
+  const falsas = grupo.slice(1).map(function (h) { return buscaCorrecta ? fraseCambiada(h) : h.frase; });
+  return {
+    tipo: "afirmaciones",
+    enunciado: buscaCorrecta ? "¿Cuál de estas afirmaciones es correcta?" : "¿Cuál de estas afirmaciones es INCORRECTA?",
+    correcta: recortar(correcta, 170), falsas: falsas.map(function (f) { return recortar(f, 170); }),
+    frase: principal.frase, resalta: principal.correcta, posicion: principal.posicion, clave: principal.clave
+  };
+}
+
+// Elige "cuantos" elementos repartidos por toda la lista (no todos del principio)
+function repartir(lista, cuantos, azar) {
+  if (lista.length <= cuantos) return lista.slice();
+  const elegidos = [];
+  const tramo = lista.length / cuantos;
+  for (let i = 0; i < cuantos; i++) {
+    const desde = Math.floor(i * tramo);
+    const hasta = Math.max(desde + 1, Math.floor((i + 1) * tramo));
+    elegidos.push(lista[desde + Math.floor(azar() * (hasta - desde))]);
+  }
+  return elegidos;
+}
+
 // ---------- Generar el examen ----------
+// Mezcla de tipos: rellenar hueco, verdadero o falso, ¿cuál es correcta?, ¿qué es X? y ¿qué concepto es?
 // azar: función que da números entre 0 y 1 (Math.random; en las pruebas, una fija)
 function generarExamen(texto, cuantas, azar) {
   azar = azar || Math.random;
@@ -218,44 +307,67 @@ function generarExamen(texto, cuantas, azar) {
   const frases = dividirFrases(texto);
   const claves = palabrasClave(frases);
 
-  // Como mucho un tercio de preguntas de definición, para variar
-  const defs = mezclarCon(preguntasDefinicion(buscarDefiniciones(frases), azar), azar).slice(0, Math.ceil(cuantas / 3));
+  // 1. Definiciones: como mucho una cuarta parte del examen
+  const defs = mezclarCon(preguntasDefinicion(buscarDefiniciones(frases), azar), azar).slice(0, Math.ceil(cuantas / 4));
   const usadas = new Set(defs.map(function (d) { return d.posicion; }));
+
+  // 2. Frases con una palabra clave (cada palabra se pregunta una sola vez)
+  const yaPreguntado = new Set(defs.map(function (d) { return d.clave.toLowerCase(); }));
   const huecos = [];
   frases.forEach(function (frase, i) {
     if (usadas.has(i)) return;
-    const p = preguntaHueco(frase, i, claves, azar);
-    if (p) huecos.push(p);
+    const h = preguntaHueco(frase, i, claves, azar);
+    if (!h || yaPreguntado.has(h.clave.toLowerCase())) return;
+    yaPreguntado.add(h.clave.toLowerCase());
+    huecos.push(h);
   });
 
-  // Reparte las preguntas por todos los apuntes (no todas del principio)
-  let todas = defs.concat(huecos);
-  const yaPreguntado = new Set();
-  todas = todas.filter(function (p) {   // la misma palabra no se pregunta dos veces
-    const k = p.clave.toLowerCase();
-    if (yaPreguntado.has(k)) return false;
-    yaPreguntado.add(k);
-    return true;
-  });
-  todas.sort(function (a, b) { return a.posicion - b.posicion; });
-  let elegidas = todas;
-  if (todas.length > cuantas) {
-    elegidas = [];
-    const tramo = todas.length / cuantas;
-    for (let i = 0; i < cuantas; i++) {
-      const desde = Math.floor(i * tramo);
-      const hasta = Math.max(desde + 1, Math.floor((i + 1) * tramo));
-      elegidas.push(todas[desde + Math.floor(azar() * (hasta - desde))]);
+  // 3. ¿Cuántas de cada tipo? "¿Cuál es correcta?" gasta 4 frases, las demás 1
+  let quedan = Math.min(cuantas - defs.length, huecos.length);
+  let afirmaciones = Math.min(Math.floor(quedan / 5), Math.floor((huecos.length - quedan) / 3));
+  if (afirmaciones < 0) afirmaciones = 0;
+  const vf = Math.floor(quedan / 5);
+  const tipos = [];
+  for (let i = 0; i < afirmaciones; i++) tipos.push("afirmaciones");
+  for (let i = 0; i < vf; i++) tipos.push("vf");
+  while (tipos.length < quedan) tipos.push("hueco");
+  const orden = mezclarCon(tipos, azar);
+
+  // 4. Construir las preguntas recorriendo los apuntes en orden
+  const elegidos = repartir(huecos, quedan + afirmaciones * 3, azar);
+  const preguntas = defs.slice();
+  let n = 0;
+  for (const tipo of orden) {
+    if (n >= elegidos.length) break;
+    const afirm = tipo === "afirmaciones" && n + 4 <= elegidos.length ? preguntaAfirmaciones(elegidos.slice(n, n + 4), azar) : null;
+    if (afirm) {
+      preguntas.push(afirm);
+      n += 4;
+    } else if (tipo === "vf") {
+      // Falsa solo si el cambio de palabra es creíble
+      const verdadera = !elegidos[n].buenCambio || azar() < 0.5;
+      preguntas.push(preguntaVerdaderoFalso(elegidos[n], verdadera));
+      n++;
+    } else {
+      preguntas.push(elegidos[n]);
+      n++;
     }
   }
+  preguntas.sort(function (a, b) { return a.posicion - b.posicion; });
 
-  // La respuesta correcta va en A, B, C o D repartida sin patrón
+  // 5. La respuesta correcta va en A, B, C o D repartida sin patrón
   let posiciones = [];
-  while (posiciones.length < elegidas.length) posiciones = posiciones.concat(mezclarCon([0, 1, 2, 3], azar));
-  return elegidas.map(function (p, i) {
+  return preguntas.map(function (p) {
+    if (p.tipo === "vf") return p;   // ya tiene sus 2 opciones
+    if (!posiciones.length) posiciones = mezclarCon([0, 1, 2, 3], azar);
+    const sitio = posiciones.pop();
     const opciones = p.falsas.slice();
-    opciones.splice(posiciones[i], 0, p.correcta);
-    return { enunciado: p.enunciado, opciones: opciones, correcta: posiciones[i], frase: p.frase, clave: p.clave };
+    opciones.splice(sitio, 0, p.correcta);
+    return {
+      tipo: p.tipo, enunciado: p.enunciado, opciones: opciones, correcta: sitio,
+      frase: p.frase, resalta: p.resalta || p.correcta, clave: p.clave,
+      tarjeta: { pregunta: recortar(p.enunciado, 200), respuesta: p.correcta }
+    };
   });
 }
 
@@ -285,8 +397,12 @@ function vistaTestHTML() {
   }).join("");
   return tarjetaApix("estudia", "Apix", "Pega tus apuntes y te hago un examen tipo test. Así compruebas si te lo sabes.", "") +
     '<div class="card stack">' +
-      '<label class="f">Tus apuntes<textarea id="tsTexto" rows="9" placeholder="Pega aquí el texto de tus apuntes (cuanto más texto, mejores preguntas)">' + esc(estado.testApuntes || "") + '</textarea></label>' +
-      '<p class="muted small">¿Los tienes en PDF o Word? Ábrelo, mantén pulsado el texto, elige <b>Seleccionar todo</b> → <b>Copiar</b> y pégalo aquí.</p>' +
+      '<button class="btn-sec full" data-act="subir-apuntes">📎 Subir apuntes (PDF, Word, foto o texto)</button>' +
+      '<input type="file" id="tsArchivo" accept=".pdf,.docx,.doc,.txt,.md,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden>' +
+      '<p class="muted small" id="tsLeyendo" aria-live="polite"></p>' +
+      '<label class="f"><span class="row between">Tus apuntes<button class="btn-txt" data-act="borrar-apuntes" style="min-height:0;padding:0">Borrar</button></span>' +
+        '<textarea id="tsTexto" rows="9" placeholder="Sube un archivo o pega aquí el texto de tus apuntes (cuanto más texto, mejores preguntas)">' + esc(estado.testApuntes || "") + '</textarea></label>' +
+      '<p class="muted small">Puedes subir varios archivos: el texto se va juntando. Las fotos se leen mejor con buena luz y la hoja recta.</p>' +
       '<label class="f">Asignatura (opcional)' + selectorAsig("tsAsig", estado.testAsignatura || "") + '</label>' +
       '<div><p class="label" style="margin-bottom:8px">Número de preguntas</p><div class="chips">' + chips + '</div></div>' +
       '<p class="err" id="tsErr"></p>' +
@@ -356,12 +472,12 @@ function terminarTest() {
   const lista = fallos.map(function (i) {
     const p = test.preguntas[i];
     const tuya = test.respuestas[i];
-    const exp = new RegExp(escRegex(esc(p.opciones[p.correcta])));
+    const exp = new RegExp(escRegex(esc(p.resalta || "")));
     return '<div class="card stack tight fallo-test" style="text-align:left;width:100%">' +
       '<p class="label">Pregunta ' + (i + 1) + '</p><p><b>' + esc(p.enunciado) + '</b></p>' +
       '<p class="small mal">❌ Tu respuesta: ' + (tuya === undefined ? "sin responder" : LETRAS[tuya] + ") " + esc(p.opciones[tuya])) + '</p>' +
       '<p class="small bien">✅ Correcta: ' + LETRAS[p.correcta] + ') ' + esc(p.opciones[p.correcta]) + '</p>' +
-      '<p class="muted small">En tus apuntes: «' + esc(p.frase).replace(exp, function (t) { return "<b>" + t + "</b>"; }) + '»</p></div>';
+      '<p class="muted small">En tus apuntes: «' + (p.resalta ? esc(p.frase).replace(exp, function (t) { return "<b>" + t + "</b>"; }) : esc(p.frase)) + '»</p></div>';
   }).join("");
   // Conceptos fallados, sin repetir
   const conceptos = [];
@@ -386,10 +502,10 @@ function fallosATarjetas() {
   let nuevas = 0;
   test.preguntas.forEach(function (p, i) {
     if (test.respuestas[i] === p.correcta) return;
-    const pregunta = recortar(p.enunciado, 200);
+    const pregunta = recortar(p.tarjeta.pregunta, 300);
     const yaEsta = estado.tarjetas.some(function (t) { return t.pregunta === pregunta; });
     if (yaEsta) return;
-    estado.tarjetas.push({ id: nuevoId(), asignatura: test.asignatura || "General", pregunta: pregunta, respuesta: p.opciones[p.correcta], caja: 1, proxima: hoy() });
+    estado.tarjetas.push({ id: nuevoId(), asignatura: test.asignatura || "General", pregunta: pregunta, respuesta: recortar(p.tarjeta.respuesta, 400), caja: 1, proxima: hoy() });
     nuevas++;
   });
   guardar();

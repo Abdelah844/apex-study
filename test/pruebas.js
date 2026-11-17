@@ -543,26 +543,28 @@ prueba("Generador de test", "como mucho 20 preguntas", function () {
   for (let i = 0; i < 6; i++) largo += APUNTES.replace(/\d{4}/g, function (a) { return String(Number(a) + i * 20); }) + "\n";
   cierto(generarExamen(largo, 50, azarFijo()).length <= 20);
 });
-prueba("Generador de test", "cada pregunta tiene 4 opciones distintas y una correcta", function () {
+prueba("Generador de test", "opciones distintas y una correcta (4, o 2 en verdadero o falso)", function () {
   const qs = generarExamen(APUNTES, 10, azarFijo());
   cierto(qs.length >= 5, "salen " + qs.length);
   for (const q of qs) {
-    igual(q.opciones.length, 4);
-    igual(new Set(q.opciones.map(function (o) { return o.toLowerCase(); })).size, 4, q.enunciado);
-    cierto(q.correcta >= 0 && q.correcta <= 3);
-    cierto(q.frase.includes(q.opciones[q.correcta]), "la respuesta sale de los apuntes");
+    igual(q.opciones.length, q.tipo === "vf" ? 2 : 4, q.enunciado);
+    igual(new Set(q.opciones.map(function (o) { return o.toLowerCase(); })).size, q.opciones.length, q.enunciado);
+    cierto(q.correcta >= 0 && q.correcta < q.opciones.length);
+    cierto(q.tarjeta && q.tarjeta.pregunta && q.tarjeta.respuesta, "tiene tarjeta de repaso");
   }
 });
-prueba("Generador de test", "la respuesta no se ve en la pregunta", function () {
+prueba("Generador de test", "en rellenar el hueco, la respuesta sale de los apuntes y no se ve", function () {
   for (const q of generarExamen(APUNTES, 10, azarFijo())) {
-    cierto(q.enunciado.includes(HUECO) || q.enunciado.startsWith("¿Qué"));
-    cierto(!new RegExp("(^|[^\\p{L}\\p{N}])" + escRegex(q.opciones[q.correcta]) + "(?![\\p{L}\\p{N}])", "u").test(q.enunciado), q.enunciado);
+    if (q.tipo !== "hueco") continue;
+    cierto(q.enunciado.includes(HUECO));
+    cierto(q.frase.includes(q.opciones[q.correcta]));
   }
 });
 prueba("Generador de test", "las fechas tienen opciones falsas que también son fechas", function () {
-  const q = generarExamen(APUNTES, 10, azarFijo()).find(function (x) { return /^\d{4}$/.test(x.opciones[x.correcta]); });
-  cierto(q, "hay alguna pregunta de fecha");
-  cierto(q.opciones.every(function (o) { return /^\d{4}$/.test(o); }));
+  const frases = dividirFrases(APUNTES);
+  const h = preguntaHueco(frases[0], 0, palabrasClave(frases), azarFijo());
+  igual(h.correcta, "1789");
+  cierto(h.falsas.every(function (o) { return /^\d{4}$/.test(o); }));
 });
 prueba("Generador de test", "la respuesta correcta no siempre está en la misma letra", function () {
   const letras = new Set(generarExamen(APUNTES, 10, azarFijo()).map(function (q) { return q.correcta; }));
@@ -575,6 +577,42 @@ prueba("Generador de test", "la nota sobre 10", function () {
   const qs = [{ correcta: 0 }, { correcta: 1 }, { correcta: 2 }, { correcta: 3 }];
   igual(notaTest(qs, [0, 1, 0, undefined]), { bien: 2, nota: 5 });
   igual(notaTest(qs.slice(0, 3), [0, 1, 2]), { bien: 3, nota: 10 });
+});
+
+
+prueba("Generador de test", "junta las frases que vienen cortadas en dos líneas (PDF y fotos)", function () {
+  igual(juntarLineas("La Revolución comenzó\nen 1789 con la toma de la Bas-\ntilla.\n- Punto nuevo"), ["La Revolución comenzó en 1789 con la toma de la Bastilla.", "- Punto nuevo"]);
+});
+prueba("Generador de test", "verdadero o falso: la falsa cambia una palabra de la frase", function () {
+  const frases = dividirFrases(APUNTES);
+  const h = preguntaHueco(frases[0], 0, palabrasClave(frases), azarFijo());
+  const v = preguntaVerdaderoFalso(h, true);
+  const f = preguntaVerdaderoFalso(h, false);
+  igual([v.correcta, f.correcta], [0, 1]);
+  cierto(v.enunciado.includes(frases[0]));
+  cierto(!f.enunciado.includes("1789") && f.enunciado.includes(h.falsas[0]));
+});
+prueba("Generador de test", "¿cuál es correcta?: solo una opción es una frase real", function () {
+  const frases = dividirFrases(APUNTES);
+  const claves = palabrasClave(frases);
+  const grupo = [0, 3, 6, 8].map(function (i) { return preguntaHueco(frases[i], i, claves, azarFijo()); });
+  grupo.forEach(function (h) { h.buenCambio = true; });
+  const p = preguntaAfirmaciones(grupo, function () { return 0.1; });   // 0.1 → "¿cuál es correcta?"
+  igual(p.correcta, frases[0]);
+  cierto(p.falsas.every(function (f) { return !frases.includes(f); }));
+});
+prueba("Generador de test", "con apuntes largos mezcla tipos de pregunta", function () {
+  let largo = "";
+  for (let i = 0; i < 4; i++) largo += APUNTES.replace(/\d{4}/g, function (a) { return String(Number(a) + i * 30); }).replace(/Napoleón/g, "Napoleón" + "ABCD"[i]) + "\n";
+  const tipos = new Set(generarExamen(largo, 20, azarFijo()).map(function (q) { return q.tipo; }));
+  cierto(tipos.has("hueco") && tipos.has("vf"), [...tipos].join(", "));
+});
+prueba("Lector de archivos", "reconoce el tipo de archivo", function () {
+  igual([tipoArchivo("tema1.PDF", ""), tipoArchivo("a.docx", ""), tipoArchivo("a.doc", ""), tipoArchivo("foto.jpg", ""), tipoArchivo("x", "image/png"), tipoArchivo("n.txt", ""), tipoArchivo("a.zip", "")],
+    ["pdf", "docx", "doc", "imagen", "imagen", "texto", "otro"]);
+});
+prueba("Lector de archivos", "saca el texto del XML de Word por párrafos", function () {
+  igual(textoDeWord('<w:p><w:r><w:t>Tema 1</w:t></w:r></w:p><w:p><w:r><w:t>Uno &amp; </w:t></w:r><w:r><w:t>dos</w:t></w:r></w:p>'), "Tema 1\nUno & dos");
 });
 
 // ---------- Ejecutar todas ----------
