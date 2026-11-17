@@ -494,6 +494,7 @@ function vistaTestHTML() {
       '<p class="muted small" id="tsLeyendo" aria-live="polite"></p>' +
       '<label class="f"><span class="row between">Tus apuntes<button class="btn-txt" data-act="borrar-apuntes" style="min-height:0;padding:0">Borrar</button></span>' +
         '<textarea id="tsTexto" rows="9" placeholder="Sube un archivo o pega aquí el texto de tus apuntes (cuanto más texto, mejores preguntas)">' + esc(estado.testApuntes || "") + '</textarea></label>' +
+      '<p class="small consejo-test">💡 <b>Consejo:</b> si tienes los apuntes en <b>Word</b>, súbelos en Word. Las preguntas salen mejor y con más sentido que con PDF o fotos, porque el texto llega limpio.</p>' +
       '<p class="muted small">Puedes subir varios archivos: el texto se va juntando. Las fotos se leen mejor con buena luz y la hoja recta.</p>' +
       '<label class="f">Asignatura (opcional)' + selectorAsig("tsAsig", estado.testAsignatura || "") + '</label>' +
       '<div><p class="label" style="margin-bottom:8px">Número de preguntas</p><div class="chips">' + chips + '</div></div>' +

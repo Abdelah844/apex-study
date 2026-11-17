@@ -152,17 +152,21 @@ async function subirApuntes(archivos) {
   $("tsErr").textContent = "";
   boton.disabled = true;
   let leidos = 0;
+  let noEsWord = false;   // PDF o foto: recordamos que con Word salen mejores preguntas
   for (const archivo of archivos) {
     try {
       aviso.textContent = "Leyendo «" + archivo.name + "»…";
       const texto = (await leerArchivo(archivo, function (t) { aviso.textContent = t; })).trim();
       caja.value = (caja.value.trim() ? caja.value.trim() + "\n\n" : "") + texto;
       leidos++;
+      const tipo = tipoArchivo(archivo.name, archivo.type);
+      if (tipo === "pdf" || tipo === "imagen") noEsWord = true;
     } catch (e) {
       $("tsErr").textContent = e.message;
     }
   }
-  aviso.textContent = leidos ? "✓ " + (leidos === 1 ? "Archivo leído" : leidos + " archivos leídos") + ". Revisa el texto y pulsa Crear examen." : "";
+  aviso.textContent = leidos ? "✓ " + (leidos === 1 ? "Archivo leído" : leidos + " archivos leídos") + ". Revisa el texto y pulsa Crear examen." +
+    (noEsWord ? " Si tienes estos apuntes en Word, súbelos en Word: las preguntas tendrán más sentido." : "") : "";
   boton.disabled = false;
   estado.testApuntes = caja.value.slice(0, 60000);
   guardar();
