@@ -34,6 +34,9 @@ function juntarLineas(texto) {
   for (const bruta of lineas) {
     const linea = bruta.trim();
     if (!linea) { juntas.push(""); continue; }
+    // El lector de fotos a veces mete una línea en blanco en mitad de una frase: la quitamos
+    const antesDelHueco = juntas.length > 1 ? juntas[juntas.length - 2] : "";
+    if (juntas[juntas.length - 1] === "" && antesDelHueco && !/[.!?:;]$/.test(antesDelHueco) && /^[\p{Ll}0-9(]/u.test(linea)) juntas.pop();
     const anterior = juntas.length ? juntas[juntas.length - 1] : "";
     const esVineta = /^([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s/.test(linea);
     const anteriorAcaba = /[.!?:;]$/.test(anterior);

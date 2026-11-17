@@ -582,6 +582,7 @@ prueba("Generador de test", "la nota sobre 10", function () {
 
 prueba("Generador de test", "junta las frases que vienen cortadas en dos líneas (PDF y fotos)", function () {
   igual(juntarLineas("La Revolución comenzó\nen 1789 con la toma de la Bas-\ntilla.\n- Punto nuevo"), ["La Revolución comenzó en 1789 con la toma de la Bastilla.", "- Punto nuevo"]);
+  igual(juntarLineas("clero y tercer\n\nestado.\n\nOtra frase."), ["clero y tercer estado.", "", "Otra frase."]);
 });
 prueba("Generador de test", "verdadero o falso: la falsa cambia una palabra de la frase", function () {
   const frases = dividirFrases(APUNTES);
