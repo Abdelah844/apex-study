@@ -517,6 +517,66 @@ prueba("Planes", "¿Qué estudio hoy? no propone planes de otra cosa", function 
   igual(queEstudioHoy(hoy()), []);
 });
 
+
+// ---------- GENERADOR DE TEST ----------
+// Azar fijo para que las pruebas den siempre lo mismo
+function azarFijo() { let x = 7; return function () { x = (x * 9301 + 49297) % 233280; return x / 233280; }; }
+const APUNTES = "La Revolución Francesa comenzó en 1789 con la toma de la Bastilla, el 14 de julio.\n" +
+  "Las causas principales fueron la crisis económica, las desigualdades sociales y la influencia de la Ilustración.\n" +
+  "La sociedad del Antiguo Régimen estaba dividida en tres estamentos: nobleza, clero y tercer estado.\n" +
+  "- Luis XVI fue ejecutado en la guillotina en 1793, durante la etapa de la Convención.\n" +
+  "Robespierre dirigió el período del Terror, en el que miles de personas fueron ejecutadas.\n" +
+  "Los jacobinos eran el grupo más radical, mientras que los girondinos eran más moderados.\n" +
+  "En 1799 Napoleón Bonaparte dio un golpe de Estado y puso fin a la Revolución.\n" +
+  "Napoleón se coronó emperador en 1804 y extendió su imperio por gran parte de Europa.\n" +
+  "Napoleón fue derrotado definitivamente en la batalla de Waterloo en 1815.\n" +
+  "Rousseau escribió El contrato social, donde defendía la soberanía nacional.";
+prueba("Generador de test", "parte los apuntes en frases y quita las viñetas", function () {
+  const f = dividirFrases("TEMA 1\n- El primer punto tiene más de seis palabras. El segundo también tiene seis palabras o más.\nCorta");
+  igual(f, ["El primer punto tiene más de seis palabras.", "El segundo también tiene seis palabras o más."]);
+});
+prueba("Generador de test", "reconoce fechas, números y nombres", function () {
+  igual([tipoPalabra("1789"), tipoPalabra("389"), tipoPalabra("Napoleón"), tipoPalabra("estado")], ["anio", "numero", "nombre", "palabra"]);
+});
+prueba("Generador de test", "como mucho 20 preguntas", function () {
+  let largo = "";
+  for (let i = 0; i < 6; i++) largo += APUNTES.replace(/\d{4}/g, function (a) { return String(Number(a) + i * 20); }) + "\n";
+  cierto(generarExamen(largo, 50, azarFijo()).length <= 20);
+});
+prueba("Generador de test", "cada pregunta tiene 4 opciones distintas y una correcta", function () {
+  const qs = generarExamen(APUNTES, 10, azarFijo());
+  cierto(qs.length >= 5, "salen " + qs.length);
+  for (const q of qs) {
+    igual(q.opciones.length, 4);
+    igual(new Set(q.opciones.map(function (o) { return o.toLowerCase(); })).size, 4, q.enunciado);
+    cierto(q.correcta >= 0 && q.correcta <= 3);
+    cierto(q.frase.includes(q.opciones[q.correcta]), "la respuesta sale de los apuntes");
+  }
+});
+prueba("Generador de test", "la respuesta no se ve en la pregunta", function () {
+  for (const q of generarExamen(APUNTES, 10, azarFijo())) {
+    cierto(q.enunciado.includes(HUECO) || q.enunciado.startsWith("¿Qué"));
+    cierto(!new RegExp("(^|[^\\p{L}\\p{N}])" + escRegex(q.opciones[q.correcta]) + "(?![\\p{L}\\p{N}])", "u").test(q.enunciado), q.enunciado);
+  }
+});
+prueba("Generador de test", "las fechas tienen opciones falsas que también son fechas", function () {
+  const q = generarExamen(APUNTES, 10, azarFijo()).find(function (x) { return /^\d{4}$/.test(x.opciones[x.correcta]); });
+  cierto(q, "hay alguna pregunta de fecha");
+  cierto(q.opciones.every(function (o) { return /^\d{4}$/.test(o); }));
+});
+prueba("Generador de test", "la respuesta correcta no siempre está en la misma letra", function () {
+  const letras = new Set(generarExamen(APUNTES, 10, azarFijo()).map(function (q) { return q.correcta; }));
+  cierto(letras.size >= 3);
+});
+prueba("Generador de test", "con muy poco texto no inventa preguntas", function () {
+  igual(generarExamen("Hola, esto es muy corto.", 10, azarFijo()).length, 0);
+});
+prueba("Generador de test", "la nota sobre 10", function () {
+  const qs = [{ correcta: 0 }, { correcta: 1 }, { correcta: 2 }, { correcta: 3 }];
+  igual(notaTest(qs, [0, 1, 0, undefined]), { bien: 2, nota: 5 });
+  igual(notaTest(qs.slice(0, 3), [0, 1, 2]), { bien: 3, nota: 10 });
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

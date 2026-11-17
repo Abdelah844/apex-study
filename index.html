@@ -115,6 +115,16 @@ input[type=date], input[type=time] { -webkit-appearance: none; appearance: none;
 .week i { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); display: grid; place-items: center; font-style: normal; font-size: .8rem; }
 .week i.on { background: var(--accent); color: var(--on-accent); box-shadow: 0 0 10px var(--glow); }
 .week i.today { outline: 2px solid var(--fg); outline-offset: 2px; }
+/* Examen tipo test */
+.enunciado-test { font-size: 1.15rem; font-weight: 700; line-height: 1.45; text-align: left; width: 100%; }
+.hueco { display: inline-block; min-width: 4em; border-bottom: 3px solid var(--accent); color: transparent; }
+.opcion-test { display: flex; gap: 12px; align-items: flex-start; width: 100%; min-height: 52px; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.opcion-test b { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface2); font-size: .85rem; }
+.opcion-test.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.opcion-test.on b { background: var(--accent); color: var(--on-accent); }
+.nota-test { font-family: var(--display); font-size: 3.2rem; font-weight: 700; line-height: 1; }
+.nota-test small { font-size: 1.2rem; color: var(--muted); }
+.fallo-test .mal { color: var(--danger); } .fallo-test .bien { color: var(--good); }
 .rango-bloque { display: flex; gap: 12px; align-items: center; width: 100%; margin-top: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--rango) 45%, var(--line)); background: color-mix(in srgb, var(--rango) 10%, var(--surface)); color: var(--fg); font: inherit; text-align: left; cursor: pointer; min-height: 44px; }
 .rango-bloque .grow { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .rango-bloque .bar { display: block; }
@@ -375,6 +385,7 @@ nav.tabs button.on svg { color: var(--accent); filter: drop-shadow(0 0 6px var(-
 <script src="avisos.js"></script>
 <script src="rangos.js"></script>
 <script src="planificador.js"></script>
+<script src="generador.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

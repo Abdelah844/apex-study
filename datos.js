@@ -20,6 +20,7 @@ function datosVacios() {
     nivel: "todos",      // qué estudia: "eso", "bachillerato", "fp" o "todos"
     misAsignaturas: [],  // asignaturas que añade el usuario (FP, universidad...)
     tarjetas: [],        // tarjetas de repaso (ver tarjetas.js)
+    testsHechos: [],     // notas de los exámenes tipo test (ver generador.js)
     nombre: "",          // cómo se llama (lo pregunta Apix en la bienvenida)
     bienvenidaVista: false,
     sonido: "nada",      // sonido para concentrarse (ver sonidos.js)

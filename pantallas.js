@@ -133,7 +133,12 @@ function pintarEstudiar() {
   const paraHoy = tarjetasParaHoy(null).length;
   const seg = '<div class="seg">' +
     '<button class="' + (vistaEstudiar === "sesion" ? "on" : "") + '" data-act="vista-estudiar" data-v="sesion">⏱️ Sesión</button>' +
-    '<button class="' + (vistaEstudiar === "tarjetas" ? "on" : "") + '" data-act="vista-estudiar" data-v="tarjetas">🃏 Tarjetas' + (paraHoy ? ' (' + paraHoy + ')' : '') + '</button></div>';
+    '<button class="' + (vistaEstudiar === "tarjetas" ? "on" : "") + '" data-act="vista-estudiar" data-v="tarjetas">🃏 Tarjetas' + (paraHoy ? ' (' + paraHoy + ')' : '') + '</button>' +
+    '<button class="' + (vistaEstudiar === "test" ? "on" : "") + '" data-act="vista-estudiar" data-v="test">📝 Test</button></div>';
+  if (vistaEstudiar === "test") {
+    $("app").innerHTML = '<div class="stack">' + cabecera("Estudiar", "Examen tipo test") + seg + vistaTestHTML() + '</div>';   // generador.js
+    return;
+  }
   if (vistaEstudiar === "tarjetas") {
     $("app").innerHTML = '<div class="stack">' + cabecera("Estudiar", "Tarjetas de repaso") + seg + vistaTarjetasHTML() + '</div>';
     return;
