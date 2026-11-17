@@ -629,6 +629,16 @@ prueba("Generador de test", "no usa frases que no se entienden solas ni títulos
   igual(dividirFrases(t), ["Las redes se dividen en subredes más pequeñas."]);
 });
 
+
+prueba("Generador de test", "no confunde frases normales con definiciones", function () {
+  const d = buscarDefiniciones([
+    "Quitando la primera dirección que es la dirección de la subred quedarían 30 hosts.",
+    "La diferencia con DHCP es que DHCP configura la conexión de los equipos.",
+    "Existen máscaras que no son estándares y que se usan para crear subredes.",
+    "El servidor es un equipo o programa que ofrece una funcionalidad a otros."]);
+  igual(d.map(function (x) { return x.termino; }), ["El servidor"]);
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

@@ -61,7 +61,7 @@ function juntarLineas(texto) {
     const antesDelHueco = juntas.length > 1 ? juntas[juntas.length - 2] : "";
     if (juntas[juntas.length - 1] === "" && antesDelHueco && !/[.!?:;]$/.test(antesDelHueco) && /^[\p{Ll}0-9(]/u.test(linea)) juntas.pop();
     const anterior = juntas.length ? juntas[juntas.length - 1] : "";
-    const esVineta = /^([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s/.test(linea);
+    const esVineta = /^([-•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s/.test(linea);
     const anteriorAcaba = /[.!?:;]$/.test(anterior);
     const empiezaMinuscula = /^[\p{Ll}0-9(]/u.test(linea);
     if (anterior && !esVineta && !anteriorAcaba && empiezaMinuscula) {
@@ -78,8 +78,8 @@ function dividirFrases(texto) {
   const frases = [];
   for (let linea of juntarLineas(texto)) {
     // Quita viñetas y números de lista: "- ", "• ", "1. ", "a) "
-    const esVineta = /^\s*([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s+/.test(linea);
-    linea = linea.replace(/^\s*([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s+/, "").trim();
+    const esVineta = /^\s*([-•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s+/.test(linea);
+    linea = linea.replace(/^\s*([-•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s+/, "").trim();
     if (!linea) continue;
     // Un título no acaba en punto: solo valen frases terminadas (o puntos de una lista)
     if (!esVineta && !/[.!?:;»")]$/.test(linea)) continue;
@@ -90,6 +90,9 @@ function dividirFrases(texto) {
       const palabras = frase.split(/\s+/).length;
       if (palabras < 6 || palabras > 45) continue;
       if (EMPIEZA_SIN_CONTEXTO.test(frase)) continue;
+      if (/\?$/.test(frase)) continue;
+      if (/\b\d+\.\d+\.\d+(\.\d+)?\s+\p{Lu}/u.test(frase)) continue;   // lleva pegado un título "5.1.8.2 Protocolo"   // las preguntas de los apuntes no sirven como afirmación
+      if (/\b(este|esta|estos|estas|dicho|dicha)\s+(fin|tipo|caso|motivo|proceso|método|sistema|forma|manera|apartado|tema)\b/i.test(frase)) continue;
       if (/^\d+(\s+\d+)+\s/.test(frase)) continue;   // "14 5 Introducción..." (números de apartado y página)
       frases.push(frase);
     }
@@ -131,6 +134,7 @@ function palabrasClave(frases) {
       if (PALABRAS_VACIAS.has(min)) return;
       if (tipo === "palabra" && p.length < 5) return;
       if (tipo === "numero" && p.length < 2) return;
+      if (tipo === "nombre" && p.length < 3) return;   // "Clase D": una letra no es una buena respuesta
       // La primera palabra de la frase va en mayúscula por ser la primera, no por ser un nombre
       if (i === 0 && tipo === "nombre") return;
       if (!claves[min]) claves[min] = { texto: p, tipo: tipo, veces: 0, puntos: 0 };
@@ -208,6 +212,7 @@ function preguntaHueco(frase, posicion, claves, azar) {
   palabras.forEach(function (p, i) {
     const c = claves[p.toLowerCase()];
     if (!c || i === 0) return;
+    if (tipoPalabra(p) !== c.tipo || p.length < 3) return;
     const repetida = palabras.filter(function (x) { return x.toLowerCase() === p.toLowerCase(); }).length > 1;
     if (repetida) return;
     // Nombres de varias palabras ("Active Directory"): no se pregunta solo un trozo
@@ -241,6 +246,15 @@ function buscarDefiniciones(frases) {
     const termino = m[1].trim();
     if (termino.split(/\s+/).length > 5) return;
     if (PALABRAS_VACIAS.has(termino.toLowerCase())) return;
+    // No son definiciones: "Quitando la primera dirección que es...", "La diferencia con DHCP es que..."
+    if (/\b(que|cual|donde|cuando|como|si)\b/i.test(termino)) return;
+    if (/^(en|de|del|con|para|por|a|desde|según|hay|se)\b/i.test(termino)) return;
+    if (claseDe(termino.split(/\s+/)[0]) === "verbo") return;   // "Existen máscaras que..."
+    if (/^\p{L}+(ando|iendo)\b/u.test(termino)) return;
+    if (/^((el|la|los|las|un|una)\s+)?(diferencia|ventaja|desventaja|ejemplo|objetivo|idea|problema|resultado|motivo|razón|causa|clave|novedad|única|principal)\b/i.test(termino)) return;
+    if (/^(que|de|en|con|para|por)\b/i.test(m[3])) return;
+    // Con "es", la definición empieza por un artículo: "es un equipo...", "es la palabra..."
+    if (m[2] === "es" && !/^(un|una|el|la|los|las|unos|unas|aquel|aquella|cualquier)\s/i.test(m[3])) return;
     // "X es imprescindible para..." no es una definición
     const primera = m[3].split(/\s+/)[0].toLowerCase();
     if (/(ble|nte|oso|osa|ivo|iva|ario|aria)$/.test(primera) || ["muy", "más", "menos", "necesario", "importante", "fundamental"].includes(primera)) return;
@@ -340,7 +354,13 @@ function generarExamen(texto, cuantas, azar) {
   const claves = palabrasClave(frases);
 
   // 1. Definiciones: como mucho una cuarta parte del examen
-  const defs = mezclarCon(preguntasDefinicion(buscarDefiniciones(frases), azar), azar).slice(0, Math.ceil(cuantas / 4));
+  const conceptosVistos = new Set();
+  const defs = mezclarCon(preguntasDefinicion(buscarDefiniciones(frases), azar), azar).filter(function (d) {
+    const k = d.clave.toLowerCase();   // el mismo concepto no se pregunta dos veces
+    if (conceptosVistos.has(k)) return false;
+    conceptosVistos.add(k);
+    return true;
+  }).slice(0, Math.ceil(cuantas / 4));
   const usadas = new Set(defs.map(function (d) { return d.posicion; }));
 
   // 2. Frases con una palabra clave (cada palabra se pregunta una sola vez)
