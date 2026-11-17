@@ -24,7 +24,13 @@ const PALABRAS_VACIAS = new Set(("de la que el en y a los del se las por un para
   "además mientras según aunque entonces así bien solo sólo tan tal tales cuyo cuya dicho dicha dichos dichas siempre " +
   "nunca menos mayor menor mejor peor gran grande grandes primero primera segundo segunda último última luego después " +
   "otro aquí allí ahora hoy cosa cosas vez veces caso casos ejemplo ejemplos etc decir llamado llamada llamados llamadas " +
-  "permite permiten utiliza utilizan usar usa usan uso sirve sirven existe existen cual cuales cuales donde cómo cuándo").split(" "));
+  "permite permiten utiliza utilizan usar usa usan uso sirve sirven existe existen cual cuales cuales donde cómo cuándo " +
+  // adjetivos que no aportan nada como respuesta ("84 _____ hosts" → posibles)
+  "posible posibles distinto distinta distintos distintas diferente diferentes diverso diversa diversos diversas varios varias " +
+  "nuevo nueva nuevos nuevas propio propia propios propias general generales especial especiales principal principales " +
+  "importante importantes necesario necesaria necesarios necesarias básico básica básicos básicas habitual habituales " +
+  "normal normales siguiente siguientes anterior anteriores cierto cierta ciertos ciertas total totales único única únicos " +
+  "únicas actual actuales concreto concreta concretos concretas determinado determinada determinados determinadas").split(" "));
 
 // ---------- 1. Frases ----------
 // Quita lo que no son apuntes: índice, encabezados y pies de página, números de página
@@ -61,9 +67,10 @@ function juntarLineas(texto) {
     const antesDelHueco = juntas.length > 1 ? juntas[juntas.length - 2] : "";
     if (juntas[juntas.length - 1] === "" && antesDelHueco && !/[.!?:;]$/.test(antesDelHueco) && /^[\p{Ll}0-9(]/u.test(linea)) juntas.pop();
     const anterior = juntas.length ? juntas[juntas.length - 1] : "";
-    const esVineta = /^([-•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s/.test(linea);
+    const esVineta = /^([-–—•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s/.test(linea);
     const anteriorAcaba = /[.!?:;]$/.test(anterior);
-    const empiezaMinuscula = /^[\p{Ll}0-9(]/u.test(linea);
+    const esApartado = /^\d+(\.\d+)+\.?\s/.test(linea);   // "5.1.7 Servicios..." es un título nuevo
+    const empiezaMinuscula = /^[\p{Ll}0-9(]/u.test(linea) && !esApartado;
     if (anterior && !esVineta && !anteriorAcaba && empiezaMinuscula) {
       // "palabra-" al final de línea: era una palabra partida
       juntas[juntas.length - 1] = /-$/.test(anterior) ? anterior.slice(0, -1) + linea : anterior + " " + linea;
@@ -74,15 +81,34 @@ function juntarLineas(texto) {
   return juntas;
 }
 
-function dividirFrases(texto) {
+// Frases que empiezan sin decir de qué hablan ("Es un procedimiento...", "Permite enviar...")
+const VERBOS_SIN_SUJETO = new Set(("es son permite permiten sirve sirven se consiste consisten utiliza utilizan incluye incluyen " +
+  "ofrece ofrecen traduce traducen mantiene mantienen proporciona proporcionan gestiona gestionan asigna asignan define " +
+  "definen realiza realizan contiene contienen indica indican está están tiene tienen puede pueden fue fueron").split(" "));
+function empiezaSinSujeto(frase) {
+  const primera = (palabrasDe(frase)[0] || "").toLowerCase();
+  if (VERBOS_SIN_SUJETO.has(primera)) return true;
+  if (PALABRAS_VACIAS.has(primera)) return false;   // "Cuando...", "Como..." no son verbos
+  return primera.length > 3 && claseDe(primera) === "verbo";
+}
+
+// titulos (opcional): se rellena con el título del apartado de cada frase
+function dividirFrases(texto, titulos) {
   const frases = [];
+  let tituloActual = "";
   for (let linea of juntarLineas(texto)) {
     // Quita viñetas y números de lista: "- ", "• ", "1. ", "a) "
-    const esVineta = /^\s*([-•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s+/.test(linea);
-    linea = linea.replace(/^\s*([-•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s+/, "").trim();
+    const esVineta = /^\s*([-–—•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s+/.test(linea);
+    linea = linea.replace(/^\s*([-–—•*·▪►\uF000-\uF0FF]|\d+[.)]|[a-zA-Z][)])\s+/, "").trim();
     if (!linea) continue;
-    // Un título no acaba en punto: solo valen frases terminadas (o puntos de una lista)
-    if (!esVineta && !/[.!?:;»")]$/.test(linea)) continue;
+    // Un título no acaba en punto: no se pregunta, pero se guarda como pista de las frases de debajo
+    if (!esVineta && !/[.!?:;»")]$/.test(linea)) {
+      const palabrasTitulo = linea.split(/\s+/).length;
+      const esPieDeFoto = /^(recurso|figura|imagen|tabla|ilustración|gráfico)\s*\d*$/i.test(linea);
+      const pareceTitulo = palabrasTitulo <= 10 && !esPieDeFoto && !/[=+×]/.test(linea) && /^[\d.\s]*\p{Lu}/u.test(linea);
+      if (pareceTitulo) tituloActual = linea.replace(/^[\d.\s]+/, "").trim();
+      continue;
+    }
     // Corta en ". " "! " "? " cuando lo siguiente empieza por mayúscula o número
     const trozos = linea.split(/(?<=[.!?;])\s+(?=[A-ZÁÉÍÓÚÑ¿¡0-9])/);
     for (const t of trozos) {
@@ -90,11 +116,14 @@ function dividirFrases(texto) {
       const palabras = frase.split(/\s+/).length;
       if (palabras < 6 || palabras > 45) continue;
       if (EMPIEZA_SIN_CONTEXTO.test(frase)) continue;
+      if (/^\p{Ll}/u.test(frase)) continue;   // empieza en minúscula: es un trozo de otra frase
+      if (/\d+\s+\(?\d+\s*-\s*[\w\d]/.test(frase)) continue;   // fórmula rota del PDF ("32 32-X" era 2 elevado a 32-X)
       if (/\?$/.test(frase)) continue;
       if (/\b\d+\.\d+\.\d+(\.\d+)?\s+\p{Lu}/u.test(frase)) continue;   // lleva pegado un título "5.1.8.2 Protocolo"   // las preguntas de los apuntes no sirven como afirmación
       if (/\b(este|esta|estos|estas|dicho|dicha)\s+(fin|tipo|caso|motivo|proceso|método|sistema|forma|manera|apartado|tema)\b/i.test(frase)) continue;
       if (/^\d+(\s+\d+)+\s/.test(frase)) continue;   // "14 5 Introducción..." (números de apartado y página)
       frases.push(frase);
+      if (titulos) titulos.push(tituloActual);
     }
   }
   return frases;
@@ -133,6 +162,7 @@ function palabrasClave(frases) {
       const tipo = tipoPalabra(p);
       if (PALABRAS_VACIAS.has(min)) return;
       if (tipo === "palabra" && p.length < 5) return;
+      if (tipo === "palabra" && /bles?$/.test(min) && !/^cables?$/.test(min)) return;   // disponible, compatible...
       if (tipo === "numero" && p.length < 2) return;
       if (tipo === "nombre" && p.length < 3) return;   // "Clase D": una letra no es una buena respuesta
       // La primera palabra de la frase va en mayúscula por ser la primera, no por ser un nombre
@@ -205,7 +235,13 @@ function opcionesFalsas(respuesta, frase, claves, azar) {
 }
 
 // ---------- 3. Preguntas de "¿qué palabra falta?" ----------
-function preguntaHueco(frase, posicion, claves, azar) {
+function preguntaHueco(frase, posicion, claves, azar, titulo) {
+  // Si la frase no dice de qué habla, usamos el título del apartado como pista (y si no hay, no sirve)
+  let contexto = "";
+  if (empiezaSinSujeto(frase)) {
+    if (!titulo || titulo.length < 3) return null;
+    contexto = titulo;
+  }
   const palabras = palabrasDe(frase);
   // La mejor palabra clave de la frase (no la primera, y que salga una sola vez en la frase)
   let mejor = null;
@@ -234,7 +270,7 @@ function preguntaHueco(frase, posicion, claves, azar) {
   // o palabras que acaban igual, como "dominio" → "directorio")
   const tipo = tipoPalabra(mejor.texto);
   const buenCambio = tipo !== "palabra" || falsas[0].slice(-1) === mejor.texto.slice(-1);
-  return { tipo: "hueco", enunciado: enunciado, correcta: mejor.texto, falsas: falsas, frase: frase, posicion: posicion, clave: mejor.texto, buenCambio: buenCambio };
+  return { tipo: "hueco", enunciado: enunciado, correcta: mejor.texto, falsas: falsas, frase: frase, posicion: posicion, clave: mejor.texto, buenCambio: buenCambio, contexto: contexto };
 }
 
 // ---------- 4. Preguntas de definición: "X es ..." ----------
@@ -305,16 +341,19 @@ function fraseCambiada(h) {
 // Convierte una pregunta de hueco en "verdadero o falso"
 function preguntaVerdaderoFalso(h, verdadera) {
   const afirmacion = verdadera ? h.frase : fraseCambiada(h);
+  const pista = h.contexto ? h.contexto + ": " : "";
   return {
-    tipo: "vf", enunciado: "¿Verdadero o falso? «" + afirmacion + "»",
+    tipo: "vf", enunciado: "¿Verdadero o falso? «" + afirmacion + "»", contexto: h.contexto,
     opciones: ["Verdadero", "Falso"], correcta: verdadera ? 0 : 1,
     frase: h.frase, resalta: h.correcta, posicion: h.posicion, clave: h.clave,
-    tarjeta: { pregunta: "¿Verdadero o falso? «" + afirmacion + "»", respuesta: (verdadera ? "Verdadero" : "Falso") + ". En tus apuntes: «" + h.frase + "»" }
+    tarjeta: { pregunta: pista + "¿Verdadero o falso? «" + afirmacion + "»", respuesta: (verdadera ? "Verdadero" : "Falso") + ". En tus apuntes: «" + h.frase + "»" }
   };
 }
 
 // Con 4 frases: "¿Cuál es correcta?" (1 real y 3 cambiadas) o "¿Cuál es incorrecta?" (3 reales y 1 cambiada)
 function preguntaAfirmaciones(grupo, azar) {
+  // En esta pregunta no se ve el título, así que todas las frases tienen que entenderse solas
+  if (grupo.some(function (h) { return h.contexto; })) return null;
   const otrasCambiables = grupo.slice(1).every(function (h) { return h.buenCambio; });
   let buscaCorrecta = azar() < 0.6;
   if (buscaCorrecta && !otrasCambiables) buscaCorrecta = false;
@@ -350,7 +389,8 @@ function repartir(lista, cuantos, azar) {
 function generarExamen(texto, cuantas, azar) {
   azar = azar || Math.random;
   cuantas = Math.max(1, Math.min(MAX_PREGUNTAS, cuantas || 10));
-  const frases = dividirFrases(texto);
+  const titulos = [];
+  const frases = dividirFrases(texto, titulos);
   const claves = palabrasClave(frases);
 
   // 1. Definiciones: como mucho una cuarta parte del examen
@@ -368,7 +408,7 @@ function generarExamen(texto, cuantas, azar) {
   const huecos = [];
   frases.forEach(function (frase, i) {
     if (usadas.has(i)) return;
-    const h = preguntaHueco(frase, i, claves, azar);
+    const h = preguntaHueco(frase, i, claves, azar, titulos[i]);
     if (!h || yaPreguntado.has(h.clave.toLowerCase())) return;
     yaPreguntado.add(h.clave.toLowerCase());
     huecos.push(h);
@@ -416,9 +456,9 @@ function generarExamen(texto, cuantas, azar) {
     const opciones = p.falsas.slice();
     opciones.splice(sitio, 0, p.correcta);
     return {
-      tipo: p.tipo, enunciado: p.enunciado, opciones: opciones, correcta: sitio,
+      tipo: p.tipo, enunciado: p.enunciado, contexto: p.contexto || "", opciones: opciones, correcta: sitio,
       frase: p.frase, resalta: p.resalta || p.correcta, clave: p.clave,
-      tarjeta: { pregunta: recortar(p.enunciado, 200), respuesta: p.correcta }
+      tarjeta: { pregunta: (p.contexto ? p.contexto + ": " : "") + recortar(p.enunciado, 200), respuesta: p.correcta }
     };
   });
 }
@@ -500,13 +540,15 @@ function pintarPregunta() {
     '<div class="bar" style="width:100%"><i style="width:' + Math.round(test.actual / total * 100) + '%"></i></div>' +
     '<p class="label">' + (test.asignatura ? esc(test.asignatura) : "Examen tipo test") + '</p>' +
     (test.aviso && test.actual === 0 ? '<p class="muted small">' + esc(test.aviso) + '</p>' : '') +
+    (p.contexto ? '<p class="contexto-test">📌 ' + esc(p.contexto) + '</p>' : '') +
     '<p class="enunciado-test">' + esc(p.enunciado).replace(HUECO, '<span class="hueco">' + HUECO + '</span>') + '</p>' +
     '<div class="stack tight" style="width:100%">' + opciones + '</div>' +
     '<div class="dos" style="width:100%">' +
       '<button class="btn-sec" data-act="test-anterior"' + (test.actual === 0 ? " disabled" : "") + '>‹ Anterior</button>' +
       (ultima ? '<button class="btn" data-act="test-terminar">Corregir</button>'
               : '<button class="btn" data-act="test-siguiente">Siguiente ›</button>') +
-    '</div></div>';
+    '</div>' +
+    '<button class="btn-txt" data-act="test-quitar">🚫 Esta pregunta no tiene sentido</button></div>';
 }
 
 function terminarTest() {
@@ -575,6 +617,15 @@ const ACCIONES_GENERADOR = {
   "test-siguiente": function () { test.actual++; pintarPregunta(); },
   "test-anterior": function () { if (test.actual > 0) { test.actual--; pintarPregunta(); } },
   "test-terminar": function () { terminarTest(); },
+  // Quita la pregunta del examen: no cuenta para la nota
+  "test-quitar": function () {
+    test.preguntas.splice(test.actual, 1);
+    test.respuestas.splice(test.actual, 1);
+    if (!test.preguntas.length) { test = null; cerrarFoco(); toast("Has quitado todas las preguntas"); return; }
+    if (test.actual >= test.preguntas.length) test.actual = test.preguntas.length - 1;
+    pintarPregunta();
+    toast("Pregunta quitada: no cuenta para la nota");
+  },
   "test-a-tarjetas": function (b) { fallosATarjetas(); b.disabled = true; },
   "test-otra-vez": function () { crearTest(true); },
   "test-salir": function () {

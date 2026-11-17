@@ -596,7 +596,7 @@ prueba("Generador de test", "verdadero o falso: la falsa cambia una palabra de l
 prueba("Generador de test", "¿cuál es correcta?: solo una opción es una frase real", function () {
   const frases = dividirFrases(APUNTES);
   const claves = palabrasClave(frases);
-  const grupo = [0, 3, 6, 8].map(function (i) { return preguntaHueco(frases[i], i, claves, azarFijo()); });
+  const grupo = [0, 3, 6, 8].map(function (i) { return preguntaHueco(frases[i], i, claves, azarFijo(), "Revolución"); });
   grupo.forEach(function (h) { h.buenCambio = true; });
   const p = preguntaAfirmaciones(grupo, function () { return 0.1; });   // 0.1 → "¿cuál es correcta?"
   igual(p.correcta, frases[0]);
@@ -637,6 +637,23 @@ prueba("Generador de test", "no confunde frases normales con definiciones", func
     "Existen máscaras que no son estándares y que se usan para crear subredes.",
     "El servidor es un equipo o programa que ofrece una funcionalidad a otros."]);
   igual(d.map(function (x) { return x.termino; }), ["El servidor"]);
+});
+
+
+prueba("Generador de test", "no pregunta adjetivos como «posibles» o «distintos»", function () {
+  const frases = ["Se pierden ochenta y cuatro posibles hosts en las tres subredes WAN."];
+  const h = preguntaHueco(frases[0], 0, palabrasClave(frases.concat(["Los hosts y las subredes forman parte de la red local."])), azarFijo());
+  cierto(!h || h.correcta !== "posibles", h && h.correcta);
+});
+prueba("Generador de test", "usa el título del apartado cuando la frase no dice de qué habla", function () {
+  const titulos = [];
+  const f = dividirFrases("1.1 Máscara de red\nEs un procedimiento equivalente al sufijo /X de CIDR en las direcciones.", titulos);
+  igual(titulos, ["Máscara de red"]);
+  cierto(empiezaSinSujeto(f[0]));
+  const claves = palabrasClave(f.concat(["CIDR y DHCP y DNS y HTTP son protocolos o métodos de las redes IP."]));
+  const h = preguntaHueco(f[0], 0, claves, azarFijo(), titulos[0]);
+  igual(h && h.contexto, "Máscara de red");
+  igual(preguntaHueco(f[0], 0, claves, azarFijo(), ""), null, "sin título no se pregunta");
 });
 
 // ---------- Ejecutar todas ----------
