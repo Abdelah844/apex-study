@@ -616,6 +616,19 @@ prueba("Lector de archivos", "saca el texto del XML de Word por párrafos", func
   igual(textoDeWord('<w:p><w:r><w:t>Tema 1</w:t></w:r></w:p><w:p><w:r><w:t>Uno &amp; </w:t></w:r><w:r><w:t>dos</w:t></w:r></w:p>'), "Tema 1\nUno & dos");
 });
 
+
+prueba("Generador de test", "quita el índice, los encabezados y los números de página", function () {
+  const pdf = "Ministerio de Educación\nÍNDICE\n14 5 Introducción a protocolos en red ............ 14\n" +
+    "Ministerio de Educación\nPágina 2\nUn protocolo es un conjunto de reglas para comunicar equipos en una red.\n" +
+    "Ministerio de Educación\n3 / 20\nEl modelo OSI divide la comunicación en siete capas distintas.";
+  igual(dividirFrases(pdf), ["Un protocolo es un conjunto de reglas para comunicar equipos en una red.", "El modelo OSI divide la comunicación en siete capas distintas."]);
+});
+prueba("Generador de test", "no usa frases que no se entienden solas ni títulos", function () {
+  const t = "Las redes se dividen en subredes más pequeñas.\nEsta división es un paso para facilitar la gestión del tráfico.\n" +
+    "Introducción a los protocolos de red de área local\nPor ello los routers necesitan tablas de rutas actualizadas.";
+  igual(dividirFrases(t), ["Las redes se dividen en subredes más pequeñas."]);
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

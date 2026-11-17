@@ -27,9 +27,32 @@ const PALABRAS_VACIAS = new Set(("de la que el en y a los del se las por un para
   "permite permiten utiliza utilizan usar usa usan uso sirve sirven existe existen cual cuales cuales donde cómo cuándo").split(" "));
 
 // ---------- 1. Frases ----------
+// Quita lo que no son apuntes: índice, encabezados y pies de página, números de página
+function limpiarTexto(texto) {
+  const lineas = String(texto || "").replace(/\r/g, "").split("\n");
+  // Las líneas que se repiten 3 veces o más son encabezados o pies de página
+  // (por ejemplo "Ministerio de Educación" en cada hoja de un PDF)
+  const veces = {};
+  const comoClave = function (l) { return l.trim().toLowerCase().replace(/\d+/g, "#"); };
+  for (const l of lineas) {
+    const k = comoClave(l);
+    if (k.length >= 3) veces[k] = (veces[k] || 0) + 1;
+  }
+  return lineas.filter(function (l) {
+    const t = l.trim();
+    if (!t) return true;
+    if (veces[comoClave(t)] >= 3 && t.length < 120 && !/\.$/.test(t)) return false;   // encabezado o pie (no acaban en punto)
+    if (/(\.{4,}|…{2,}|·{4,}|_{4,}|\. \. \. \.)/.test(t)) return false;    // línea del índice "Tema 1 ........ 5"
+    if (/^(p[áa]g(ina)?\.?\s*)?\d+(\s*(\/|de)\s*\d+)?$/i.test(t)) return false; // "Página 3", "3 / 20", "14"
+    return true;
+  }).join("\n");
+}
+
+// Frases que no se entienden solas ("Esta división es...", "Por ello...")
+const EMPIEZA_SIN_CONTEXTO = /^(est[aeo]s?|es[aeo]s?|aquel(l[oa]s?)?|dich[oa]s?|ell[oa]s?|por (ello|eso|tanto|lo tanto|este motivo)|sin embargo|además|también|así|asimismo|en este caso|de esta (forma|manera)|de este modo|otr[oa]s?|lo anterior|en cambio|no obstante|esto)\b/i;
 // En los PDF y en las fotos una frase suele venir cortada en varias líneas: las volvemos a juntar
 function juntarLineas(texto) {
-  const lineas = String(texto || "").replace(/\r/g, "").split("\n");
+  const lineas = limpiarTexto(texto).split("\n");
   const juntas = [];
   for (const bruta of lineas) {
     const linea = bruta.trim();
@@ -55,14 +78,20 @@ function dividirFrases(texto) {
   const frases = [];
   for (let linea of juntarLineas(texto)) {
     // Quita viñetas y números de lista: "- ", "• ", "1. ", "a) "
+    const esVineta = /^\s*([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s+/.test(linea);
     linea = linea.replace(/^\s*([-•*·▪►]|\d+[.)]|[a-zA-Z][)])\s+/, "").trim();
     if (!linea) continue;
+    // Un título no acaba en punto: solo valen frases terminadas (o puntos de una lista)
+    if (!esVineta && !/[.!?:;»")]$/.test(linea)) continue;
     // Corta en ". " "! " "? " cuando lo siguiente empieza por mayúscula o número
     const trozos = linea.split(/(?<=[.!?;])\s+(?=[A-ZÁÉÍÓÚÑ¿¡0-9])/);
     for (const t of trozos) {
       const frase = t.trim();
       const palabras = frase.split(/\s+/).length;
-      if (palabras >= 6 && palabras <= 45) frases.push(frase);
+      if (palabras < 6 || palabras > 45) continue;
+      if (EMPIEZA_SIN_CONTEXTO.test(frase)) continue;
+      if (/^\d+(\s+\d+)+\s/.test(frase)) continue;   // "14 5 Introducción..." (números de apartado y página)
+      frases.push(frase);
     }
   }
   return frases;
