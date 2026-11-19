@@ -53,7 +53,7 @@ let estado = cargar();
 
 // Variables de la interfaz (no se guardan)
 let tab = "inicio";             // pestaña abierta
-let vistaAgenda = "examenes";   // "examenes", "deberes", "planes" u "horario"
+let vistaAgenda = "examenes";   // "calendario", "examenes", "deberes", "planes" u "horario"
 let mesVista = primerDiaMes(new Date());
 let diaSel = null;              // día pulsado en el calendario
 let minutosElegidos = 25;

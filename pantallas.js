@@ -11,8 +11,8 @@ function pintar() {
   });
   if (tab === "inicio") pintarInicio();
   if (tab === "estudiar") pintarEstudiar();
+  if (tab === "calendario") { tab = "agenda"; vistaAgenda = "calendario"; }   // el calendario ahora está dentro de Agenda
   if (tab === "agenda") pintarAgenda();
-  if (tab === "calendario") pintarCalendario();
   if (tab === "progreso") pintarProgreso();
 }
 
@@ -182,6 +182,8 @@ function pintarAgenda() {
     contenido = vistaDeberesHTML();
   } else if (vistaAgenda === "horario") {
     contenido = vistaHorarioHTML();
+  } else if (vistaAgenda === "calendario") {
+    contenido = vistaCalendarioHTML();
   } else {
     const futuros = estado.planes.filter(function (p) { return p.fecha >= hoy(); }).sort(function (a, b) { return (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1; });
     const pasados = estado.planes.filter(function (p) { return p.fecha < hoy(); }).sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; }).slice(0, 10);
@@ -194,7 +196,8 @@ function pintarAgenda() {
 
   $("app").innerHTML = '<div class="stack">' +
     cabecera("Agenda", "Organiza tu semana") +
-    '<div class="seg">' +
+    '<div class="seg seg-agenda">' +
+      '<button class="' + (vistaAgenda === "calendario" ? "on" : "") + '" data-act="vista-agenda" data-v="calendario">Mes</button>' +
       '<button class="' + (vistaAgenda === "examenes" ? "on" : "") + '" data-act="vista-agenda" data-v="examenes">Exámenes</button>' +
       '<button class="' + (vistaAgenda === "deberes" ? "on" : "") + '" data-act="vista-agenda" data-v="deberes">Deberes</button>' +
       '<button class="' + (vistaAgenda === "planes" ? "on" : "") + '" data-act="vista-agenda" data-v="planes">Planes</button>' +
@@ -202,8 +205,8 @@ function pintarAgenda() {
     '</div>' + contenido + '</div>';
 }
 
-// ===== Pestaña CALENDARIO =====
-function pintarCalendario() {
+// ===== Vista CALENDARIO (dentro de Agenda) =====
+function vistaCalendarioHTML() {
   const anio = mesVista.getFullYear();
   const mes = mesVista.getMonth();
   const titulo = mesVista.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
@@ -250,14 +253,12 @@ function pintarCalendario() {
       '<button class="btn-sec" data-act="nuevo-plan" data-fecha="' + diaSel + '">+ Plan</button></div></div>';
   }
 
-  $("app").innerHTML = '<div class="stack">' +
-    cabecera("Calendario", "Tu mes de un vistazo") +
-    '<div class="card stack">' +
+  return '<div class="card stack">' +
       '<div class="row between"><button class="icon-btn" data-act="mes" data-n="-1" aria-label="Mes anterior">‹</button>' +
       '<h2>' + titulo + '</h2><button class="icon-btn" data-act="mes" data-n="1" aria-label="Mes siguiente">›</button></div>' +
       '<div class="cal">' + celdas + '</div>' +
       '<div class="leyenda"><span><i class="marca-e"></i>Examen</span><span><i class="marca-d"></i>Entrega</span><span><i class="marca-p"></i>Plan</span><span><i class="marca-s"></i>Estudiaste</span></div>' +
-    '</div>' + detalle + '</div>';
+    '</div>' + detalle;
 }
 
 // ===== Pestaña PROGRESO =====

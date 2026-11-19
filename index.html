@@ -117,6 +117,7 @@ input[type=date], input[type=time] { -webkit-appearance: none; appearance: none;
 .week i.today { outline: 2px solid var(--fg); outline-offset: 2px; }
 /* Examen tipo test */
 .consejo-test { margin: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.seg-agenda button { padding-left: 4px; padding-right: 4px; font-size: .8rem; }
 .contexto-test { width: 100%; text-align: left; margin: 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); font-weight: 700; font-size: .9rem; }
 .enunciado-test { font-size: 1.15rem; font-weight: 700; line-height: 1.45; text-align: left; width: 100%; }
 .hueco { display: inline-block; min-width: 4em; border-bottom: 3px solid var(--accent); color: transparent; }
@@ -336,7 +337,7 @@ button:active { transform: scale(.97); }
 
 /* ===== BARRA DE PESTAÑAS ===== */
 nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
-nav.tabs .in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+nav.tabs .in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); }
 nav.tabs button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 9px; font-size: .75rem; font-weight: 700; color: var(--muted); }
 nav.tabs button svg { width: 22px; height: 22px; }
 nav.tabs button.on { color: var(--fg); }
@@ -355,7 +356,6 @@ nav.tabs button.on svg { color: var(--accent); filter: drop-shadow(0 0 6px var(-
   <button data-tab="inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</button>
   <button data-tab="estudiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Estudiar</button>
   <button data-tab="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg>Agenda</button>
-  <button data-tab="calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</button>
   <button data-tab="progreso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Progreso</button>
 </div></nav>
 

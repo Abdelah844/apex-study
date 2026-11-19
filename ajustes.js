@@ -81,6 +81,12 @@ function tarjetaRecordatorios() {
     interruptor("tresDias", "Avisar 3 días antes del examen") +
     interruptor("semana", "Avisar 1 semana antes del examen") +
     interruptor("resumen", "Resumen de tu semana (domingos a las 20:00)") +
+    '<h3 style="margin-top:10px">Horas de silencio</h3>' +
+    interruptor("silencio", "No avisar de noche") +
+    '<div class="dos"><label class="f">Desde<input id="avSilDesde" type="time" data-cambio="hora-silencio" value="' + c.silDesde + '"></label>' +
+    '<label class="f">Hasta<input id="avSilHasta" type="time" data-cambio="hora-silencio" value="' + c.silHasta + '"></label></div>' +
+    interruptor("silencioClases", "No avisar durante las clases de mi horario") +
+    '<p class="muted small">Si un aviso de exámenes o deberes cae en esas horas, te llega al terminar. Los planes y el horario avisan siempre a la hora que pusiste.</p>' +
     '</div>';
 }
 
@@ -97,6 +103,10 @@ document.addEventListener("change", function (ev) {
   if (ev.target.dataset.cambio === "hora-aviso" && ev.target.value) {
     guardarConfigAvisos({ tarde: $("avTarde").value || "18:00", manana: $("avManana").value || "07:30" });
     toast("✓ Recordatorios actualizados");
+  }
+  if (ev.target.dataset.cambio === "hora-silencio" && ev.target.value) {
+    guardarConfigAvisos({ silDesde: $("avSilDesde").value || "23:00", silHasta: $("avSilHasta").value || "07:00" });
+    toast("✓ Horas de silencio guardadas");
   }
 });
 

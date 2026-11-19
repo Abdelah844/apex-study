@@ -160,8 +160,8 @@ const ACCIONES = {
     cancelarAvisosPlan(b.dataset.id);
     guardar(); pintar();
   },
-  "mes": function (b) { mesVista = new Date(mesVista.getFullYear(), mesVista.getMonth() + Number(b.dataset.n), 1); pintarCalendario(); },
-  "dia": function (b) { diaSel = b.dataset.dia; pintarCalendario(); },
+  "mes": function (b) { mesVista = new Date(mesVista.getFullYear(), mesVista.getMonth() + Number(b.dataset.n), 1); pintarAgenda(); },
+  "dia": function (b) { diaSel = b.dataset.dia; pintarAgenda(); },
 
   // Avisos y datos
   "activar-avisos": function () {

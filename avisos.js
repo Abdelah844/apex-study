@@ -172,8 +172,48 @@ async function suscripcionPush() {
   return sub.toJSON();
 }
 
+// ---------- HORAS DE SILENCIO ----------
+// Los avisos automáticos (exámenes, deberes y resumen) no llegan de noche ni, si quieres, en clase:
+// si caen en esas horas, se mueven al final del silencio.
+// Los planes, el horario y los descansos avisan siempre a su hora, porque esa hora la elegiste tú.
+function ponerHora(fecha, hhmm) {
+  const d = new Date(fecha);
+  const partes = hhmm.split(":");
+  d.setHours(Number(partes[0]), Number(partes[1]), 0, 0);
+  return d;
+}
+
+function fueraDeSilencio(cuando, c, horario) {
+  let fecha = new Date(cuando);
+  for (let vuelta = 0; vuelta < 6; vuelta++) {   // por si al moverlo cae en otra clase
+    const minutos = fecha.getHours() * 60 + fecha.getMinutes();
+    let movido = false;
+    if (c.silencio) {
+      const desde = aMinutos(c.silDesde);
+      const hasta = aMinutos(c.silHasta);
+      const cruzaMedianoche = desde > hasta;   // de 23:00 a 07:00
+      const dentro = cruzaMedianoche ? (minutos >= desde || minutos < hasta) : (minutos >= desde && minutos < hasta);
+      if (dentro) {
+        if (cruzaMedianoche && minutos >= desde) fecha.setDate(fecha.getDate() + 1);   // a la mañana siguiente
+        fecha = ponerHora(fecha, c.silHasta);
+        movido = true;
+      }
+    }
+    if (!movido && c.silencioClases) {
+      const dia = (fecha.getDay() + 6) % 7;   // 0 = lunes, como en el horario
+      const clase = (horario || []).find(function (b) {
+        return b.tipo === "clase" && b.dia === dia && aMinutos(b.inicio) <= minutos && minutos < aMinutos(b.fin);
+      });
+      if (clase) { fecha = ponerHora(fecha, clase.fin); movido = true; }
+    }
+    if (!movido) break;
+  }
+  return fecha;
+}
+
 // Guarda en Supabase un aviso cualquiera: clave única, cuándo, título y texto
 async function avisoNube(clave, cuando, titulo, cuerpo) {
+  if (/^(ex-|deb-|resumen-)/.test(clave)) cuando = fueraDeSilencio(cuando, configAvisos(), estado.horario);
   if (cuando <= new Date()) return;   // esa hora ya pasó
   try {
     const sub = await suscripcionPush();
@@ -245,7 +285,10 @@ function programarTodosNube() {
 // Cada examen tiene 2 avisos: el día antes a las 18:00 y el mismo día a las 07:30
 // Ajustes de los recordatorios (con valores por defecto si faltan)
 function configAvisos() {
-  return Object.assign({ tarde: "18:00", manana: "07:30", semana: false, tresDias: true, resumen: true }, estado.avisosConfig || {});
+  return Object.assign({
+    tarde: "18:00", manana: "07:30", semana: false, tresDias: true, resumen: true,
+    silencio: true, silDesde: "23:00", silHasta: "07:00", silencioClases: false   // horas de silencio
+  }, estado.avisosConfig || {});
 }
 
 // Todos los avisos posibles de un examen; "activo" dice si están encendidos en Ajustes

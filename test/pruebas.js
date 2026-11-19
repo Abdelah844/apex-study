@@ -656,6 +656,48 @@ prueba("Generador de test", "usa el título del apartado cuando la frase no dice
   igual(preguntaHueco(f[0], 0, claves, azarFijo(), ""), null, "sin título no se pregunta");
 });
 
+
+// ---------- HORAS DE SILENCIO ----------
+const SILENCIO = { silencio: true, silDesde: "23:00", silHasta: "07:00", silencioClases: false };
+function hhmm(d) { return fechaISO(d) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+prueba("Silencio", "un aviso a las 23:30 pasa a las 07:00 del día siguiente", function () {
+  igual(hhmm(fueraDeSilencio(new Date("2026-11-20T23:30:00"), SILENCIO, [])), "2026-11-21 07:00");
+});
+prueba("Silencio", "un aviso a las 05:00 pasa a las 07:00 del mismo día", function () {
+  igual(hhmm(fueraDeSilencio(new Date("2026-11-20T05:00:00"), SILENCIO, [])), "2026-11-20 07:00");
+});
+prueba("Silencio", "fuera del silencio no cambia", function () {
+  igual(hhmm(fueraDeSilencio(new Date("2026-11-20T18:00:00"), SILENCIO, [])), "2026-11-20 18:00");
+});
+prueba("Silencio", "si está apagado, no cambia nada", function () {
+  igual(hhmm(fueraDeSilencio(new Date("2026-11-20T23:30:00"), Object.assign({}, SILENCIO, { silencio: false }), [])), "2026-11-20 23:30");
+});
+prueba("Silencio", "en clase: se mueve al final de la clase", function () {
+  // 2026-11-20 es viernes → dia 4
+  const horario = [{ tipo: "clase", dia: 4, inicio: "08:00", fin: "14:30" }, { tipo: "estudio", dia: 4, inicio: "17:00", fin: "18:00" }];
+  const c = Object.assign({}, SILENCIO, { silencioClases: true });
+  igual(hhmm(fueraDeSilencio(new Date("2026-11-20T10:00:00"), c, horario)), "2026-11-20 14:30");
+  igual(hhmm(fueraDeSilencio(new Date("2026-11-20T17:30:00"), c, horario)), "2026-11-20 17:30", "los bloques de estudio no silencian");
+});
+prueba("Silencio", "al terminar la noche, si empieza una clase, espera a que acabe", function () {
+  const horario = [{ tipo: "clase", dia: 4, inicio: "07:00", fin: "08:00" }];
+  igual(hhmm(fueraDeSilencio(new Date("2026-11-20T06:00:00"), Object.assign({}, SILENCIO, { silencioClases: true }), horario)), "2026-11-20 08:00");
+});
+
+// ---------- PEGAR UNA LISTA DE TARJETAS ----------
+prueba("Tarjetas", "pegar una lista: una tarjeta por línea con distintos separadores", function () {
+  const r = parsearListaTarjetas("¿Qué es DHCP? - Reparte direcciones IP\nPuerto de HTTPS = 443\n- Capital de Francia: París\n\nlínea sin separador\nIPv4\t32 bits");
+  igual(r.tarjetas, [
+    { pregunta: "¿Qué es DHCP?", respuesta: "Reparte direcciones IP" },
+    { pregunta: "Puerto de HTTPS", respuesta: "443" },
+    { pregunta: "Capital de Francia", respuesta: "París" },
+    { pregunta: "IPv4", respuesta: "32 bits" }]);
+  igual(r.malas, 1);
+});
+prueba("Tarjetas", "un guion dentro de una palabra no corta la tarjeta", function () {
+  igual(parsearListaTarjetas("Wi-Fi - red inalámbrica").tarjetas, [{ pregunta: "Wi-Fi", respuesta: "red inalámbrica" }]);
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

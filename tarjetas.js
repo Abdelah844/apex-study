@@ -71,14 +71,16 @@ function vistaTarjetasHTML() {
         '<button class="btn-sec" data-act="nueva-tarjeta" data-asig="' + esc(a) + '">+ Tarjeta</button>' +
       '</div></div>';
   }
-  return html + '<button class="btn' + (lista.length ? '-sec full' : '') + '" data-act="nueva-tarjeta" data-asig="">+ Nueva tarjeta</button>';
+  return html + '<div class="dos"><button class="btn' + (lista.length ? '-sec' : '') + '" data-act="nueva-tarjeta" data-asig="">+ Nueva tarjeta</button>' +
+    '<button class="btn-sec" data-act="pegar-tarjetas" data-asig="">📋 Pegar una lista</button></div>';
 }
 
 // Lista de las tarjetas de una asignatura (para editarlas o borrarlas)
 function listaTarjetasHTML(asig) {
   const lista = (estado.tarjetas || []).filter(function (t) { return t.asignatura === asig; });
   return '<div class="row between"><button class="btn-txt" data-act="volver-tarjetas">‹ Volver</button>' +
-    '<button class="btn-txt" data-act="nueva-tarjeta" data-asig="' + esc(asig) + '">+ Tarjeta</button></div>' +
+    '<span><button class="btn-txt" data-act="pegar-tarjetas" data-asig="' + esc(asig) + '">📋 Lista</button> ' +
+    '<button class="btn-txt" data-act="nueva-tarjeta" data-asig="' + esc(asig) + '">+ Tarjeta</button></span></div>' +
     '<div class="card"><h2>' + esc(asig) + '</h2><div class="list">' +
     (lista.length ? lista.map(function (t) {
       return '<div class="item"><div class="grow"><span class="name">' + esc(t.pregunta) + '</span>' +
@@ -89,6 +91,67 @@ function listaTarjetasHTML(asig) {
     }).join("") : '<p class="vacio">No quedan tarjetas.</p>') + '</div></div>' +
     '<p class="muted small" style="text-align:center">Los puntos ●●○○○ son la caja: cuantos más, mejor te la sabes.</p>';
 }
+
+// ---------- Crear muchas tarjetas pegando una lista ----------
+// Una tarjeta por línea: "pregunta - respuesta" (también vale "=", ":", ";" o un tabulador)
+const SEPARADORES_TARJETA = ["\t", " = ", " - ", " – ", " — ", ": ", ";"];
+
+function parsearListaTarjetas(texto) {
+  const tarjetas = [];
+  let malas = 0;
+  for (const bruta of String(texto || "").split("\n")) {
+    const linea = bruta.replace(/^\s*([-•*·]|\d+[.)])\s+/, "").trim();   // quita viñetas y números de lista
+    if (!linea) continue;
+    let partes = null;
+    for (const sep of SEPARADORES_TARJETA) {
+      const sitio = linea.indexOf(sep);
+      if (sitio > 0) { partes = [linea.slice(0, sitio), linea.slice(sitio + sep.length)]; break; }
+    }
+    const pregunta = partes ? partes[0].trim() : "";
+    const respuesta = partes ? partes[1].trim() : "";
+    if (!pregunta || !respuesta) { malas++; continue; }
+    tarjetas.push({ pregunta: pregunta.slice(0, 200), respuesta: respuesta.slice(0, 400) });
+  }
+  return { tarjetas: tarjetas, malas: malas };
+}
+
+function hojaListaTarjetas(asignatura) {
+  abrirHoja('<div class="row between"><h2>Pegar una lista</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+    '<p class="muted">Escribe o pega <b>una tarjeta por línea</b>: la pregunta, un guion y la respuesta.</p>' +
+    '<label class="f">Asignatura' + selectorAsig("tlAsig", asignatura || "") + '</label>' +
+    '<label class="f">Tus tarjetas<textarea id="tlTexto" rows="9" placeholder="¿Qué es DHCP? - Un servicio que reparte direcciones IP\nPuerto de HTTPS - 443\nCapital de Francia = París"></textarea></label>' +
+    '<p class="small" id="tlCuenta">Se crearán 0 tarjetas.</p>' +
+    '<p class="err" id="tlErr"></p>' +
+    '<button class="btn" data-act="guardar-lista-tarjetas">Crear tarjetas</button>');
+  setTimeout(function () { if ($("tlTexto")) $("tlTexto").focus(); }, 80);
+}
+
+function guardarListaTarjetas() {
+  const asignatura = leerAsig("tlAsig");
+  const r = parsearListaTarjetas($("tlTexto").value);
+  if (!asignatura) { $("tlErr").textContent = "Elige la asignatura (así se agrupan)."; return; }
+  if (!r.tarjetas.length) { $("tlErr").textContent = "No encuentro ninguna tarjeta. Pon la pregunta, un guion ( - ) y la respuesta en cada línea."; return; }
+  estado.tarjetas = estado.tarjetas || [];
+  let creadas = 0;
+  for (const t of r.tarjetas) {
+    const repetida = estado.tarjetas.some(function (x) { return x.asignatura === asignatura && x.pregunta === t.pregunta; });
+    if (repetida) continue;
+    estado.tarjetas.push({ id: nuevoId(), asignatura: asignatura, pregunta: t.pregunta, respuesta: t.respuesta, caja: 1, proxima: hoy() });
+    creadas++;
+  }
+  guardar();
+  cerrarHoja();
+  pintar();
+  toast("🃏 " + creadas + (creadas === 1 ? " tarjeta creada" : " tarjetas creadas") + (r.malas ? " · " + r.malas + " líneas sin guion no se han usado" : ""));
+}
+
+// Cuenta en directo cuántas tarjetas saldrán
+document.addEventListener("input", function (ev) {
+  if (ev.target.id !== "tlTexto") return;
+  const r = parsearListaTarjetas(ev.target.value);
+  $("tlCuenta").textContent = "Se crearán " + r.tarjetas.length + (r.tarjetas.length === 1 ? " tarjeta" : " tarjetas") +
+    (r.malas ? ". " + r.malas + (r.malas === 1 ? " línea no tiene" : " líneas no tienen") + " guion y no se usará" + (r.malas === 1 ? "" : "n") + "." : ".");
+});
 
 // ---------- Formulario para crear o editar ----------
 function hojaTarjeta(asignatura, id) {
@@ -235,6 +298,8 @@ function terminarRepaso() {
 const ACCIONES_TARJETAS = {
   "vista-estudiar": function (b) { vistaEstudiar = b.dataset.v; asigVerTarjetas = null; pintarEstudiar(); },
   "nueva-tarjeta": function (b) { hojaTarjeta(b.dataset.asig, null); },
+  "pegar-tarjetas": function (b) { hojaListaTarjetas(b.dataset.asig); },
+  "guardar-lista-tarjetas": function () { guardarListaTarjetas(); },
   "editar-tarjeta": function (b) { hojaTarjeta(null, b.dataset.id); },
   "guardar-tarjeta": function (b) { guardarTarjeta(b.dataset.id, b.dataset.otra); },
   "borrar-tarjeta": function (b) {

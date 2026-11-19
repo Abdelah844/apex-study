@@ -16,17 +16,53 @@ const FRASES_ESTUDIO = [
   "Nada de móvil: solo tú y tu objetivo.",
   "Paso a paso se sube la montaña.",
   "Lo que estudias hoy, mañana te sale solo.",
-  "La disciplina gana a la motivación."
+  "La disciplina gana a la motivación.",
+  "Si te cuesta, es que estás aprendiendo.",
+  "Tu yo del examen te lo va a agradecer.",
+  "Un rato más y te ganas el descanso.",
+  "Cuanto más lo repasas, más fácil se vuelve.",
+  "No tiene que ser perfecto, tiene que estar hecho.",
+  "Los que aprueban no son genios: son constantes.",
+  "Respira y sigue. Lo tienes.",
+  "Estudiar ahora es menos agobio después.",
+  "Intenta explicarlo con tus palabras: así se queda.",
+  "Ya has empezado, que es lo más difícil.",
+  "Céntrate en una sola cosa. Solo esta.",
+  "Las redes pueden esperar. Tu futuro no.",
+  "Hoy siembras, el día del examen recoges.",
+  "Si algo no lo entiendes, apúntalo y pregúntalo mañana."
 ];
 
-// Frases de Inicio cuando no hay nada especial
+// Frases de Inicio cuando no hay nada especial (una distinta cada día)
 const FRASES_HOLA = [
   "¿Qué aprendemos hoy?",
   "Crea tarjetas de repaso en Estudiar → Tarjetas. Yo te las pregunto.",
   "Un poco cada día y llegarás lejos.",
   "Apunta tus exámenes y planifica cuándo empiezas. Yo te aviso.",
   "Organiza tu semana en Agenda → Horario y no se te escapará nada.",
-  "Hoy es buen día para aprender algo nuevo."
+  "Hoy es buen día para aprender algo nuevo.",
+  "¿Tienes apuntes? Súbelos en Estudiar → Test y te hago un examen.",
+  "Veinticinco minutos de estudio cuentan más que tres horas pensando en estudiar.",
+  "Repasar un poco cada día es el truco de los que aprueban sin agobios.",
+  "Si te sabes la teoría, prueba a hacerte un test. Así sabes si de verdad te la sabes.",
+  "Empieza por lo que menos te apetece. Luego todo es cuesta abajo.",
+  "¿Sabías que explicar algo en voz alta ayuda a recordarlo?",
+  "Deja el móvil en otra habitación mientras estudias. Funciona.",
+  "Dormir bien también es estudiar: el cerebro guarda lo aprendido mientras duermes.",
+  "Pequeñas sesiones, grandes resultados.",
+  "Hoy toca dar un pasito más. ¿Empezamos?",
+  "Haz descansos cortos: 25 minutos de estudio y 5 de pausa.",
+  "Lo difícil se vuelve fácil a base de repetirlo.",
+  "Tu racha te está esperando. ¡A por ella!",
+  "Revisa tus deberes en Agenda para que no se te pase ninguno.",
+  "Un examen no se aprueba el día antes, se aprueba toda la semana.",
+  "Escribe resúmenes cortos: si cabe en una tarjeta, lo entiendes.",
+  "Mejor 20 minutos hoy que nada en toda la semana.",
+  "Estudiar con un objetivo claro rinde el doble. Ponle nombre a tu sesión.",
+  "Si ayer no pudiste, hoy es un buen día para volver.",
+  "Cada tarjeta que repasas es un punto más en el examen.",
+  "Bebe agua y ventila la habitación: tu cabeza lo nota.",
+  "¿Te atasca un tema? Divídelo en trozos pequeños."
 ];
 
 // Elige una frase según el día (así no cambia cada vez que abres la app)
