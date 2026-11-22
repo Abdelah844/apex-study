@@ -66,6 +66,11 @@ comprobar("Botones", "cada botón (data-act) tiene su acción", function () {
   const faltan = [...usados].filter(function (a) { return !definidos.has(a); });
   if (faltan.length) throw new Error("sin acción: " + faltan.join(", "));
 });
+comprobar("App instalable", "la versión de Ajustes es la misma que la de sw.js", function () {
+  const sw = leer("sw.js").match(/apex-study-([\d.]+)/)[1];
+  const app = leer("ajustes.js").match(/VERSION_APP = "([\d.]+)"/)[1];
+  if (sw !== app) throw new Error("sw.js dice " + sw + " y ajustes.js dice " + app);
+});
 comprobar("Accesibilidad", "se puede hacer zoom con dos dedos", function () {
   if (/user-scalable=no|maximum-scale=1/.test(leer("index.html"))) throw new Error("el zoom está bloqueado");
 });

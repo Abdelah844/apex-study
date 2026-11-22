@@ -110,6 +110,9 @@ document.addEventListener("change", function (ev) {
   }
 });
 
+// Número de versión (súbelo junto con VERSION en sw.js)
+const VERSION_APP = "3.7.2";
+
 // ---------- MODO CLARO / OSCURO ----------
 // "auto" sigue al móvil; "claro" u "oscuro" lo fuerza. Se guarda aparte de los datos.
 function temaGuardado() {
@@ -176,7 +179,8 @@ function hojaAjustes() {
       '<input type="file" id="archivoCopia" accept=".json,application/json" hidden>' +
       '<button class="btn-sec btn-danger" data-act="borrar-todo">Borrar todos los datos</button></div>' +
     '<a class="btn-sec full" href="mailto:apixgymsoporte@gmail.com?subject=' + encodeURIComponent("Opinión sobre Apix Study") + '" style="text-align:center;text-decoration:none">💬 Enviar opinión o avisar de un fallo</a>' +
-    '<a class="btn-txt" href="privacidad.html" target="_blank" rel="noopener" style="text-align:center">🛡️ Política de privacidad</a>');
+    '<a class="btn-txt" href="privacidad.html" target="_blank" rel="noopener" style="text-align:center">🛡️ Política de privacidad</a>' +
+    '<p class="muted small" style="text-align:center">Versión ' + VERSION_APP + '</p>');
 }
 
 

@@ -8,14 +8,26 @@
 // Si se apagara sola, el móvil avisaría a la app igual que si salieras a otra app,
 // y Apix pensaría que te has ido.
 let bloqueoPantalla = null;
+let estadoPantalla = "";   // qué ha pasado al pedirlo (se enseña en la pantalla de estudio)
 async function pedirPantallaEncendida() {
-  if (!("wakeLock" in navigator) || bloqueoPantalla) return;
+  if (!("wakeLock" in navigator)) {
+    estadoPantalla = "⚠️ Tu móvil no puede mantener la pantalla encendida desde la app. Actualiza el sistema o súbele el tiempo de bloqueo automático.";
+    pintarEstadoPantalla();
+    return;
+  }
+  if (bloqueoPantalla) return;
   try {
     bloqueoPantalla = await navigator.wakeLock.request("screen");
+    estadoPantalla = "🔆 Pantalla siempre encendida mientras estudias";
     bloqueoPantalla.addEventListener("release", function () { bloqueoPantalla = null; });
   } catch (e) {
     bloqueoPantalla = null;   // el móvil no lo deja (por ejemplo, con ahorro de batería)
+    estadoPantalla = "⚠️ Tu móvil no ha dejado mantener la pantalla encendida (" + e.name + "). Quita el ahorro de batería o súbele el tiempo de bloqueo automático.";
   }
+  pintarEstadoPantalla();
+}
+function pintarEstadoPantalla() {
+  if ($("focoPantalla")) $("focoPantalla").textContent = estadoPantalla;
 }
 function soltarPantalla() {
   if (bloqueoPantalla) bloqueoPantalla.release();
@@ -43,6 +55,7 @@ function abrirFoco() {
     '<div class="bocadillo"><p id="focoFrase"></p></div>' +
     '<div class="anillo"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="fondo"/><circle cx="50" cy="50" r="44" class="avance" id="focoAnillo" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><span class="t num" id="focoReloj">--:--</span></div>' +
     '<p class="muted small" id="focoSalidas"></p>' +
+    '<p class="muted small" id="focoPantalla"></p>' +
     '<button class="btn-txt" id="focoNoSali" data-act="no-he-salido" hidden>No he salido, se apagó la pantalla</button>' +
     botonesSonido() +
     '<button class="btn-sec" data-act="rendirse">Me rindo</button></div>';
