@@ -111,7 +111,7 @@ document.addEventListener("change", function (ev) {
 });
 
 // Número de versión (súbelo junto con VERSION en sw.js)
-const VERSION_APP = "3.9.0";
+const VERSION_APP = "3.9.1";
 
 // ---------- MODO CLARO / OSCURO ----------
 // "auto" sigue al móvil; "claro" u "oscuro" lo fuerza. Se guarda aparte de los datos.

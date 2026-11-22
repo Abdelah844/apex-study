@@ -145,17 +145,20 @@ function hojaTarjetasDeApuntes(asignatura) {
   const texto = apuntesDe(asignatura);   // generador.js
   propuestaTarjetas = texto ? tarjetasDesdeApuntes(texto, 20) : [];
   let cuerpo;
+  // Subir archivos aquí mismo (PDF, Word, fotos o texto)
+  const subir = '<button class="btn' + (texto ? '-sec full' : '') + '" data-act="tda-subir">📎 ' + (texto ? "Añadir más apuntes" : "Subir apuntes (PDF, Word, foto o texto)") + '</button>' +
+    '<input type="file" id="tdaArchivo" accept=".pdf,.docx,.doc,.txt,.md,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden>' +
+    '<p class="muted small" id="tdaLeyendo" aria-live="polite"></p><p class="err" id="tdaErr"></p>';
   if (!texto) {
-    cuerpo = '<p class="vacio">No tienes apuntes guardados de esta asignatura.</p>' +
-      '<button class="btn" data-act="ir-test-asig" data-asig="' + esc(asignatura) + '">📎 Subir apuntes</button>';
+    cuerpo = '<p class="vacio">Sube tus apuntes y saco las tarjetas. Con Word salen mejor.</p>' + subir;
   } else if (!propuestaTarjetas.length) {
-    cuerpo = '<p class="vacio">Con estos apuntes no me salen tarjetas. Prueba con más texto (mejor en Word).</p>';
+    cuerpo = '<p class="vacio">Con estos apuntes no me salen tarjetas. Prueba con más texto (mejor en Word).</p>' + subir;
   } else {
     cuerpo = '<p class="muted small">Desmarca las que no te sirvan.</p><div class="list">' + propuestaTarjetas.map(function (t, i) {
       return '<label class="item elegir-tarjeta"><input type="checkbox" data-i="' + i + '" checked>' +
         '<div class="grow"><span class="name">' + esc(t.pregunta) + '</span><p class="muted small">' + esc(t.respuesta) + '</p></div></label>';
     }).join("") + '</div>' +
-      '<button class="btn" data-act="crear-tarjetas-apuntes">Crear ' + propuestaTarjetas.length + ' tarjetas</button>';
+      '<button class="btn" data-act="crear-tarjetas-apuntes">Crear ' + propuestaTarjetas.length + ' tarjetas</button>' + subir;
   }
   abrirHoja('<div class="row between"><h2>Tarjetas de tus apuntes</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
     '<label class="f">Asignatura' + selectorAsig("tdaAsig", asignatura || "") + '</label>' + cuerpo);
@@ -180,6 +183,24 @@ function crearTarjetasDeApuntes() {
   toast("🃏 " + creadas + (creadas === 1 ? " tarjeta creada" : " tarjetas creadas"));
 }
 
+// Lee los archivos, los junta con los apuntes de esa asignatura y vuelve a proponer tarjetas
+async function subirApuntesTarjetas(archivos) {
+  const asignatura = leerAsig("tdaAsig");
+  let texto = apuntesDe(asignatura);
+  for (const archivo of archivos) {
+    try {
+      $("tdaLeyendo").textContent = "Leyendo «" + archivo.name + "»…";
+      const leido = (await leerArchivo(archivo, function (t) { if ($("tdaLeyendo")) $("tdaLeyendo").textContent = t; })).trim();   // lector.js
+      texto = (texto ? texto + "\n\n" : "") + leido;
+    } catch (e) {
+      if ($("tdaErr")) $("tdaErr").textContent = e.message;
+      return;
+    }
+  }
+  guardarApuntes(asignatura, texto);   // también quedan guardados para hacer tests
+  hojaTarjetasDeApuntes(asignatura);
+}
+
 // Cuenta en directo cuántas tarjetas vas a crear y cambia de asignatura
 document.addEventListener("change", function (ev) {
   if (ev.target.closest && ev.target.closest(".elegir-tarjeta")) {
@@ -188,6 +209,7 @@ document.addEventListener("change", function (ev) {
     if (boton) { boton.textContent = "Crear " + n + (n === 1 ? " tarjeta" : " tarjetas"); boton.disabled = !n; }
   }
   if (ev.target.id === "tdaAsig" && ev.target.value !== "otra") hojaTarjetasDeApuntes(ev.target.value);   // tda = tarjetas de apuntes
+  if (ev.target.id === "tdaArchivo" && ev.target.files.length) { subirApuntesTarjetas(Array.from(ev.target.files)); ev.target.value = ""; }
 });
 
 // ---------- Crear muchas tarjetas pegando una lista ----------
@@ -481,6 +503,7 @@ const ACCIONES_TARJETAS = {
   "repaso-comprobar": function () { comprobarEscrito(); },
   "tarjetas-apuntes-ir": function () { hojaTarjetasDeApuntes(estado.testAsignatura || ""); },
   "crear-tarjetas-apuntes": function () { crearTarjetasDeApuntes(); },
+  "tda-subir": function () { $("tdaArchivo").click(); },
   "ir-test-asig": function (b) { cerrarHoja(); estado.testAsignatura = b.dataset.asig; vistaEstudiar = "test"; irA("estudiar"); },
   "compartir-tarjetas": function (b) { compartirTarjetas(b.dataset.asig); },
   "guardar-lista-tarjetas": function () { guardarListaTarjetas(); },
