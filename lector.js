@@ -168,8 +168,7 @@ async function subirApuntes(archivos) {
   aviso.textContent = leidos ? "✓ " + (leidos === 1 ? "Archivo leído" : leidos + " archivos leídos") + ". Revisa el texto y pulsa Crear examen." +
     (noEsWord ? " Si tienes estos apuntes en Word, súbelos en Word: las preguntas tendrán más sentido." : "") : "";
   boton.disabled = false;
-  estado.testApuntes = caja.value.slice(0, 60000);
-  guardar();
+  guardarApuntes(leerAsig("tsAsig"), caja.value.trim());   // generador.js
 }
 
 // El botón "Subir apuntes" abre el selector de archivos del móvil
@@ -186,7 +185,6 @@ const ACCIONES_LECTOR = {
     if (!$("tsTexto").value || !confirm("¿Borrar el texto de los apuntes?")) return;
     $("tsTexto").value = "";
     $("tsLeyendo").textContent = "";
-    estado.testApuntes = "";
-    guardar();
+    guardarApuntes(leerAsig("tsAsig"), "");
   }
 };

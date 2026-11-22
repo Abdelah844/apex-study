@@ -303,8 +303,8 @@ function tarjetaRepasoExpres() {
   const tarjetas = (estado.tarjetas || []).filter(function (t) { return t.asignatura === e.asignatura; }).length;
   let boton = "";
   if (tarjetas) boton = '<button class="btn auto" data-act="repaso-expres" data-asig="' + esc(e.asignatura) + '">⚡ Repasar ' + tarjetas + (tarjetas === 1 ? ' tarjeta' : ' tarjetas') + '</button>';
-  else if (estado.testApuntes) boton = '<button class="btn auto" data-act="ir-test">📝 Hacer un test</button>';
-  else boton = '<button class="btn auto" data-act="ir-test">📝 Subir apuntes y hacer un test</button>';
+  else if (apuntesDe(e.asignatura)) boton = '<button class="btn auto" data-act="ir-test-asig" data-asig="' + esc(e.asignatura) + '">📝 Hacer un test</button>';
+  else boton = '<button class="btn auto" data-act="ir-test-asig" data-asig="' + esc(e.asignatura) + '">📝 Subir apuntes y hacer un test</button>';
   return '<div class="card stack tight expres"><p class="label">Repaso de última hora</p>' +
     '<p>Tienes examen de <b>' + esc(e.asignatura) + '</b> ' + cuando + '. Un repaso rápido ahora marca la diferencia.</p>' +
     '<div class="acciones">' + boton + '</div></div>';

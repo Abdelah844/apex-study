@@ -470,6 +470,87 @@ function notaTest(preguntas, respuestas) {
   return { bien: bien, nota: Math.round(bien / preguntas.length * 100) / 10 };
 }
 
+// ---------- Test con tus tarjetas ----------
+// Cada tarjeta es una pregunta; las opciones falsas son respuestas de otras tarjetas
+function generarTestDeTarjetas(tarjetas, cuantas, azar) {
+  azar = azar || Math.random;
+  const conRespuesta = tarjetas.filter(function (t) { return t.pregunta && t.respuesta; });
+  const respuestas = [];
+  for (const t of conRespuesta) {
+    if (!respuestas.some(function (r) { return r.toLowerCase() === t.respuesta.toLowerCase(); })) respuestas.push(t.respuesta);
+  }
+  if (respuestas.length < 4) return [];   // hacen falta al menos 4 respuestas distintas
+  const elegidas = mezclarCon(conRespuesta, azar).slice(0, Math.min(MAX_PREGUNTAS, cuantas || 10));
+  let posiciones = [];
+  return elegidas.map(function (t) {
+    const otras = mezclarCon(respuestas.filter(function (r) { return r.toLowerCase() !== t.respuesta.toLowerCase(); }), azar).slice(0, 3);
+    if (!posiciones.length) posiciones = mezclarCon([0, 1, 2, 3], azar);
+    const sitio = posiciones.pop();
+    const opciones = otras.map(function (o) { return recortar(o, 130); });
+    opciones.splice(sitio, 0, recortar(t.respuesta, 130));
+    return {
+      tipo: "tarjeta", enunciado: t.pregunta, contexto: "", opciones: opciones, correcta: sitio,
+      frase: "", resalta: "", clave: recortar(t.respuesta, 40), tarjetaId: t.id,
+      tarjeta: { pregunta: t.pregunta, respuesta: t.respuesta }
+    };
+  });
+}
+
+// Vuelve a mezclar las opciones de unas preguntas (para "Repetir solo los fallos")
+function remezclarPreguntas(preguntas, azar) {
+  azar = azar || Math.random;
+  return mezclarCon(preguntas, azar).map(function (p) {
+    if (p.tipo === "vf") return Object.assign({}, p);
+    const correcta = p.opciones[p.correcta];
+    const opciones = mezclarCon(p.opciones, azar);
+    return Object.assign({}, p, { opciones: opciones, correcta: opciones.indexOf(correcta) });
+  });
+}
+
+// ---------- Tarjetas a partir de los apuntes ----------
+// Saca tarjetas de las definiciones ("¿Qué es X?") y de las frases con una palabra clave
+function tarjetasDesdeApuntes(texto, maximo, azar) {
+  azar = azar || Math.random;
+  const titulos = [];
+  const frases = dividirFrases(texto, titulos);
+  const claves = palabrasClave(frases);
+  const lista = [];
+  const vistas = new Set();
+  for (const d of buscarDefiniciones(frases)) {
+    const k = conceptoLimpio(d.termino).toLowerCase();
+    if (vistas.has(k)) continue;
+    vistas.add(k);
+    lista.push({ pregunta: (d.verbo === "son" ? "¿Qué son " : "¿Qué es ") + terminoEnFrase(d.termino) + "?", respuesta: recortar(d.definicion, 200), posicion: d.posicion });
+  }
+  frases.forEach(function (frase, i) {
+    if (lista.some(function (t) { return t.posicion === i; })) return;
+    const h = preguntaHueco(frase, i, claves, azar, titulos[i]);
+    if (!h || vistas.has(h.clave.toLowerCase())) return;
+    vistas.add(h.clave.toLowerCase());
+    lista.push({ pregunta: (h.contexto ? h.contexto + ": " : "") + h.enunciado, respuesta: h.correcta, posicion: i });
+  });
+  lista.sort(function (a, b) { return a.posicion - b.posicion; });
+  return repartir(lista, maximo || 20, azar).map(function (t) { return { pregunta: t.pregunta, respuesta: t.respuesta }; });
+}
+
+// ---------- Apuntes guardados por asignatura ----------
+// estado.apuntes = { "Redes Locales": "texto...", "": "apuntes sin asignatura" }
+function todosLosApuntes() {
+  if (!estado.apuntes) {
+    estado.apuntes = {};
+    if (estado.testApuntes) estado.apuntes[estado.testAsignatura || ""] = estado.testApuntes;   // los de antes
+  }
+  return estado.apuntes;
+}
+function apuntesDe(asignatura) { return todosLosApuntes()[asignatura || ""] || ""; }
+function guardarApuntes(asignatura, texto) {
+  const todos = todosLosApuntes();
+  if (texto) todos[asignatura || ""] = texto.slice(0, 60000);
+  else delete todos[asignatura || ""];
+  delete estado.testApuntes;   // ya no se usa
+  guardar();
+}
+
 // =====================================================
 // PANTALLAS
 // =====================================================
@@ -487,31 +568,76 @@ function vistaTestHTML() {
       '<p class="muted small">' + fechaCorta(t.fecha) + ' · ' + t.bien + ' de ' + t.preguntas + '</p></div>' +
       '<span class="pill ' + (t.nota >= 5 ? "ok" : "exam") + '">' + formatoNota(t.nota) + '</span></div>';
   }).join("");
-  return tarjetaApix("estudia", "Apix", "Pega tus apuntes y te hago un examen tipo test. Así compruebas si te lo sabes.", "") +
+  const asig = estado.testAsignatura || "";
+  asigApuntesActual = asig;
+  const modo = estado.testModo || "practica";
+  // Asignaturas que ya tienen apuntes guardados (para cambiar rápido)
+  const guardadas = Object.keys(todosLosApuntes()).filter(function (a) { return a !== asig; }).map(function (a) {
+    return '<button class="chip" data-act="test-cargar-asig" data-asig="' + esc(a) + '">📚 ' + (a ? esc(a) : "Sin asignatura") + '</button>';
+  }).join("");
+  return tarjetaApix("estudia", "Apix", "Elige la asignatura, sube tus apuntes y te hago un examen tipo test. Se quedan guardados para la próxima vez.", "") +
     '<div class="card stack">' +
+      '<label class="f">Asignatura' + selectorAsig("tsAsig", asig) + '</label>' +
+      (guardadas ? '<div><p class="label" style="margin-bottom:6px">También tienes apuntes de</p><div class="chips">' + guardadas + '</div></div>' : '') +
       '<button class="btn-sec full" data-act="subir-apuntes">📎 Subir apuntes (PDF, Word, foto o texto)</button>' +
       '<input type="file" id="tsArchivo" accept=".pdf,.docx,.doc,.txt,.md,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden>' +
       '<p class="muted small" id="tsLeyendo" aria-live="polite"></p>' +
       '<label class="f"><span class="row between">Tus apuntes<button class="btn-txt" data-act="borrar-apuntes" style="min-height:0;padding:0">Borrar</button></span>' +
-        '<textarea id="tsTexto" rows="9" placeholder="Sube un archivo o pega aquí el texto de tus apuntes (cuanto más texto, mejores preguntas)">' + esc(estado.testApuntes || "") + '</textarea></label>' +
+        '<textarea id="tsTexto" rows="9" placeholder="Sube un archivo o pega aquí el texto de tus apuntes (cuanto más texto, mejores preguntas)">' + esc(apuntesDe(asig)) + '</textarea></label>' +
       '<p class="small consejo-test">💡 <b>Consejo:</b> si tienes los apuntes en <b>Word</b>, súbelos en Word. Las preguntas salen mejor y con más sentido que con PDF o fotos, porque el texto llega limpio.</p>' +
       '<p class="muted small">Puedes subir varios archivos: el texto se va juntando. Las fotos se leen mejor con buena luz y la hoja recta.</p>' +
-      '<label class="f">Asignatura (opcional)' + selectorAsig("tsAsig", estado.testAsignatura || "") + '</label>' +
       '<div><p class="label" style="margin-bottom:8px">Número de preguntas</p><div class="chips">' + chips + '</div></div>' +
+      '<div><p class="label" style="margin-bottom:8px">Cómo quieres hacerlo</p><div class="seg">' +
+        '<button class="' + (modo === "practica" ? "on" : "") + '" data-act="test-modo" data-m="practica">🎯 Práctica</button>' +
+        '<button class="' + (modo === "examen" ? "on" : "") + '" data-act="test-modo" data-m="examen">📝 Examen</button></div>' +
+        '<p class="muted small" id="tsModoTexto" style="margin-top:6px">' + textoModoTest(modo) + '</p></div>' +
       '<p class="err" id="tsErr"></p>' +
       '<button class="btn" data-act="crear-test">📝 Crear examen</button>' +
+      '<button class="btn-sec full" data-act="tarjetas-de-apuntes">🃏 Crear tarjetas con estos apuntes</button>' +
     '</div>' +
     (hechos ? '<div class="card"><h2>Tus últimos test</h2><div class="list">' + hechos + '</div></div>' : '');
 }
 
+let asigApuntesActual = "";   // de qué asignatura son los apuntes que hay en la caja
+
+function textoModoTest(modo) {
+  return modo === "practica" ? "Ves si aciertas nada más responder, con la explicación. Ideal para estudiar."
+    : "Respondes todo y la nota sale al final, como en un examen de verdad.";
+}
+
+// Al cambiar de asignatura: guardamos los apuntes de la anterior y cargamos los de la nueva
+function cambiarAsigApuntes(nueva) {
+  if ($("tsTexto")) guardarApuntes(asigApuntesActual, $("tsTexto").value.trim());
+  estado.testAsignatura = nueva;
+  asigApuntesActual = nueva;
+  guardar();
+  pintarEstudiar();
+}
+
+// Empieza un test (lo usan los apuntes y las tarjetas)
+function abrirTest(preguntas, datos) {
+  test = Object.assign({ preguntas: preguntas, respuestas: [], actual: 0, inicio: Date.now(), modo: estado.testModo || "practica", seguidas: 0, mejorSeguidas: 0 }, datos);
+  $("tabs").hidden = true;
+  $("foco").hidden = false;
+  pintarPregunta();
+}
+
+// Test con las tarjetas de una asignatura
+function empezarTestTarjetas(asignatura) {
+  const lista = (estado.tarjetas || []).filter(function (t) { return t.asignatura === asignatura; });
+  const preguntas = generarTestDeTarjetas(lista, 10);
+  if (!preguntas.length) { toast("Necesitas al menos 4 tarjetas con respuestas distintas"); return; }
+  abrirTest(preguntas, { asignatura: asignatura, deTarjetas: asignatura, texto: null });
+}
+
 function crearTest(mismoTexto) {
+  if (mismoTexto && test.deTarjetas) { const a = test.deTarjetas; test = null; empezarTestTarjetas(a); return; }
   const texto = mismoTexto ? test.texto : $("tsTexto").value.trim();
   const asignatura = mismoTexto ? test.asignatura : leerAsig("tsAsig");
   if (!mismoTexto) {
     if (texto.length < 200) { $("tsErr").textContent = "Pega más texto: al menos un par de párrafos de apuntes."; return; }
-    estado.testApuntes = texto.slice(0, 60000);   // se guarda para no tener que pegarlo otra vez
     estado.testAsignatura = asignatura;
-    guardar();
+    guardarApuntes(asignatura, texto);   // se guardan para no tener que pegarlos otra vez
   }
   const preguntas = generarExamen(texto, testCuantas);
   if (preguntas.length < 3) {
@@ -519,11 +645,8 @@ function crearTest(mismoTexto) {
     $("tsErr").textContent = "Con estos apuntes no salen suficientes preguntas. Pega más texto, con frases completas.";
     return;
   }
-  test = { preguntas: preguntas, respuestas: [], actual: 0, asignatura: asignatura, texto: texto, inicio: Date.now() };
-  $("tabs").hidden = true;
-  $("foco").hidden = false;
-  if (preguntas.length < testCuantas) test.aviso = "Tus apuntes dan para " + preguntas.length + " preguntas. Con más texto saldrán más.";
-  pintarPregunta();
+  abrirTest(preguntas, { asignatura: asignatura, texto: texto,
+    aviso: preguntas.length < testCuantas ? "Tus apuntes dan para " + preguntas.length + " preguntas. Con más texto saldrán más." : "" });
 }
 
 function pintarPregunta() {
@@ -531,10 +654,25 @@ function pintarPregunta() {
   const total = test.preguntas.length;
   const elegida = test.respuestas[test.actual];
   const ultima = test.actual === total - 1;
+  // En modo práctica, al responder se ve al momento si está bien
+  const corregida = test.modo === "practica" && elegida !== undefined;
   const opciones = p.opciones.map(function (o, i) {
-    return '<button class="opcion-test ' + (elegida === i ? "on" : "") + '" data-act="test-elegir" data-i="' + i + '">' +
+    let clase = elegida === i ? "on" : "";
+    if (corregida && i === p.correcta) clase = "acierto";
+    else if (corregida && i === elegida) clase = "fallo";
+    return '<button class="opcion-test ' + clase + '" data-act="test-elegir" data-i="' + i + '"' + (corregida ? " disabled" : "") + '>' +
       '<b>' + LETRAS[i] + '</b><span>' + esc(o) + '</span></button>';
   }).join("");
+  let explicacion = "";
+  if (corregida) {
+    const bien = elegida === p.correcta;
+    const exp = new RegExp(escRegex(esc(p.resalta || "x\u0000")));
+    explicacion = '<div class="explicacion-test ' + (bien ? "bien" : "mal") + '">' +
+      '<p><b>' + (bien ? "✅ ¡Correcto!" : "❌ La buena es la " + LETRAS[p.correcta]) + '</b>' +
+      (bien && test.seguidas >= 3 ? ' 🔥 ' + test.seguidas + ' seguidas' : '') + '</p>' +
+      (p.frase ? '<p class="small">En tus apuntes: «' + (p.resalta ? esc(p.frase).replace(exp, function (t) { return "<b>" + t + "</b>"; }) : esc(p.frase)) + '»</p>' : '') +
+      '</div>';
+  }
   $("foco").innerHTML = '<div class="in">' +
     '<div class="row between" style="width:100%"><button class="btn-txt" data-act="test-salir">✕ Salir</button>' +
     '<span class="muted small num">' + (test.actual + 1) + ' / ' + total + '</span></div>' +
@@ -543,7 +681,7 @@ function pintarPregunta() {
     (test.aviso && test.actual === 0 ? '<p class="muted small">' + esc(test.aviso) + '</p>' : '') +
     (p.contexto ? '<p class="contexto-test">📌 ' + esc(p.contexto) + '</p>' : '') +
     '<p class="enunciado-test">' + esc(p.enunciado).replace(HUECO, '<span class="hueco">' + HUECO + '</span>') + '</p>' +
-    '<div class="stack tight" style="width:100%">' + opciones + '</div>' +
+    '<div class="stack tight" style="width:100%">' + opciones + '</div>' + explicacion +
     '<div class="dos" style="width:100%">' +
       '<button class="btn-sec" data-act="test-anterior"' + (test.actual === 0 ? " disabled" : "") + '>‹ Anterior</button>' +
       (ultima ? '<button class="btn" data-act="test-terminar">Corregir</button>'
@@ -564,6 +702,13 @@ function terminarTest() {
     estado.sesiones.push({ fecha: hoy(), hora: horaActual(), min: minutos, objetivo: "Test" + (test.asignatura ? " de " + test.asignatura : ""), asignatura: test.asignatura || "", distracciones: 0, tipo: "test" });
     estado.mejorRacha = Math.max(estado.mejorRacha, rachaActual());
   }
+  // Test de tarjetas: las que fallas vuelven a la caja 1 para repasarlas pronto
+  if (test.deTarjetas) {
+    test.preguntas.forEach(function (p, i) {
+      const t = estado.tarjetas.find(function (x) { return x.id === p.tarjetaId; });
+      if (t && test.respuestas[i] !== p.correcta) aplicarRespuesta(t, "no", hoy());
+    });
+  }
   guardar();
   const xpGanada = xpTotal() - xpAntes;
   const subida = comprobarSubida();
@@ -581,7 +726,7 @@ function terminarTest() {
       '<p class="label">Pregunta ' + (i + 1) + '</p><p><b>' + esc(p.enunciado) + '</b></p>' +
       '<p class="small mal">❌ Tu respuesta: ' + (tuya === undefined ? "sin responder" : LETRAS[tuya] + ") " + esc(p.opciones[tuya])) + '</p>' +
       '<p class="small bien">✅ Correcta: ' + LETRAS[p.correcta] + ') ' + esc(p.opciones[p.correcta]) + '</p>' +
-      '<p class="muted small">En tus apuntes: «' + (p.resalta ? esc(p.frase).replace(exp, function (t) { return "<b>" + t + "</b>"; }) : esc(p.frase)) + '»</p></div>';
+      (p.frase ? '<p class="muted small">En tus apuntes: «' + (p.resalta ? esc(p.frase).replace(exp, function (t) { return "<b>" + t + "</b>"; }) : esc(p.frase)) + '»</p>' : '') + '</div>';
   }).join("");
   // Conceptos fallados, sin repetir
   const conceptos = [];
@@ -596,9 +741,12 @@ function terminarTest() {
     '<p>' + r.bien + ' de ' + test.preguntas.length + ' bien. ' + frase + '</p>' +
     '<p><span class="pill ok">+' + xpGanada + ' XP</span>' + (minutos >= 1 ? ' <span class="muted small">· ' + minutos + ' min de estudio</span>' : '') + '</p>' +
     (subida ? '<p class="subida">' + subida + '</p>' : '') +
+    (test.mejorSeguidas >= 3 ? '<p class="muted small">Mejor racha: 🔥 ' + test.mejorSeguidas + ' seguidas</p>' : '') +
+    (fallos.length ? '<button class="btn full" data-act="test-fallos">🔁 Repetir solo los fallos (' + fallos.length + ')</button>' : '') +
     (fallos.length ? '<div style="width:100%;text-align:left"><p class="label">Conceptos que tienes que repasar</p><div class="chips">' + repasar + '</div></div>' +
-      '<button class="btn-sec full" data-act="test-a-tarjetas">🃏 Pasar los fallos a tarjetas de repaso</button>' + lista : '') +
-    '<button class="btn" data-act="test-otra-vez">🔄 Otro test con los mismos apuntes</button>' +
+      (test.deTarjetas ? '<p class="muted small">Las tarjetas que has fallado te saldrán antes en el repaso.</p>'
+        : '<button class="btn-sec full" data-act="test-a-tarjetas">🃏 Pasar los fallos a tarjetas de repaso</button>') + lista : '') +
+    '<button class="btn' + (fallos.length ? '-sec full' : '') + '" data-act="test-otra-vez">🔄 ' + (test.deTarjetas ? "Otro test con estas tarjetas" : "Otro test con los mismos apuntes") + '</button>' +
     '<button class="btn-txt" data-act="test-cerrar">Cerrar</button></div>';
   if (r.nota >= 9) confeti();
 }
@@ -625,7 +773,35 @@ const ACCIONES_GENERADOR = {
     for (const c of document.querySelectorAll('[data-act="test-cuantas"]')) c.classList.toggle("on", c === b);
   },
   "crear-test": function () { crearTest(false); },
-  "test-elegir": function (b) { test.respuestas[test.actual] = Number(b.dataset.i); pintarPregunta(); },
+  "test-elegir": function (b) {
+    const p = test.preguntas[test.actual];
+    if (test.modo === "practica") {
+      if (test.respuestas[test.actual] !== undefined) return;   // en práctica no se cambia la respuesta
+      const bien = Number(b.dataset.i) === p.correcta;
+      test.seguidas = bien ? test.seguidas + 1 : 0;
+      test.mejorSeguidas = Math.max(test.mejorSeguidas, test.seguidas);
+      vibrar(bien ? 15 : 40);
+    }
+    test.respuestas[test.actual] = Number(b.dataset.i);
+    pintarPregunta();
+  },
+  "test-modo": function (b) {
+    estado.testModo = b.dataset.m;
+    guardar();
+    for (const c of document.querySelectorAll('[data-act="test-modo"]')) c.classList.toggle("on", c === b);
+    $("tsModoTexto").textContent = textoModoTest(b.dataset.m);
+  },
+  "test-cargar-asig": function (b) { cambiarAsigApuntes(b.dataset.asig); },
+  "test-tarjetas": function (b) { empezarTestTarjetas(b.dataset.asig); },
+  "test-fallos": function () {
+    const fallos = test.preguntas.filter(function (p, i) { return test.respuestas[i] !== p.correcta; });
+    abrirTest(remezclarPreguntas(fallos), { asignatura: test.asignatura, texto: test.texto, deTarjetas: test.deTarjetas, aviso: "Repaso de tus fallos" });
+  },
+  "tarjetas-de-apuntes": function () {
+    const asig = leerAsig("tsAsig");
+    guardarApuntes(asig, $("tsTexto").value.trim());
+    hojaTarjetasDeApuntes(asig);
+  },
   "test-siguiente": function () { test.actual++; pintarPregunta(); },
   "test-anterior": function () { if (test.actual > 0) { test.actual--; pintarPregunta(); } },
   "test-terminar": function () { terminarTest(); },
@@ -639,7 +815,7 @@ const ACCIONES_GENERADOR = {
     toast("Pregunta quitada: no cuenta para la nota");
   },
   "test-a-tarjetas": function (b) { fallosATarjetas(); b.disabled = true; },
-  "test-otra-vez": function () { crearTest(true); },
+  "test-otra-vez": function () { if (test.deTarjetas || test.texto) crearTest(true); else { test = null; cerrarFoco(); } },
   "test-salir": function () {
     if (!confirm("¿Salir del examen? Se perderán tus respuestas.")) return;
     test = null;
@@ -647,3 +823,9 @@ const ACCIONES_GENERADOR = {
   },
   "test-cerrar": function () { test = null; cerrarFoco(); }
 };
+
+// Cambiar la asignatura carga sus apuntes guardados
+document.addEventListener("change", function (ev) {
+  if (ev.target.id === "tsAsig" && ev.target.value !== "otra") cambiarAsigApuntes(ev.target.value);
+  if (ev.target.id === "tsAsigOtra" && ev.target.value.trim()) cambiarAsigApuntes(leerAsig("tsAsig"));
+});

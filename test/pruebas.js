@@ -738,6 +738,72 @@ prueba("Consejos", "no enseña lo que ya usas", function () {
   igual(consejoDeHoy("2026-11-10").id, "rapido");
 });
 
+
+// ---------- TEST Y TARJETAS PARA LA ESO ----------
+prueba("Modo escribir", "acepta mayúsculas, signos y artículos", function () {
+  igual(compararRespuesta("París", "parís"), "si");
+  igual(compararRespuesta("the dog", "dog"), "si");
+  igual(compararRespuesta("  ¡Mitocondria! ", "La mitocondria"), "si");
+});
+prueba("Modo escribir", "una tilde o una letra mal es «casi»", function () {
+  igual(compararRespuesta("paris", "París"), "casi");
+  igual(compararRespuesta("fotosintesis", "fotosíntesis"), "casi");
+  igual(compararRespuesta("beatiful", "beautiful"), "casi");
+});
+prueba("Modo escribir", "otra palabra es «no» y vale cualquiera de varias opciones", function () {
+  igual(compararRespuesta("gato", "perro"), "no");
+  igual(compararRespuesta("", "perro"), "no");
+  igual(compararRespuesta("coche", "car / coche"), "si");
+  igual(compararRespuesta("rojo", "red, rojo"), "si");
+});
+prueba("Modo escribir", "las respuestas largas las compara el alumno", function () {
+  igual(compararRespuesta("algo", "Un servicio que reparte direcciones IP a los equipos de la red"), null);
+});
+prueba("Test de tarjetas", "cada tarjeta es una pregunta con respuestas de otras tarjetas", function () {
+  const ts = ["perro-dog", "gato-cat", "casa-house", "rojo-red", "azul-blue"].map(function (x, i) {
+    const p = x.split("-"); return { id: "t" + i, asignatura: "Inglés", pregunta: p[0], respuesta: p[1], caja: 1, proxima: hoy() };
+  });
+  const qs = generarTestDeTarjetas(ts, 10, azarFijo());
+  igual(qs.length, 5);
+  for (const q of qs) {
+    const t = ts.find(function (x) { return x.id === q.tarjetaId; });
+    igual(q.opciones[q.correcta], t.respuesta);
+    igual(q.opciones.length, 4);
+    igual(new Set(q.opciones).size, 4);
+  }
+});
+prueba("Test de tarjetas", "con menos de 4 respuestas distintas no se puede", function () {
+  igual(generarTestDeTarjetas([{ id: "a", pregunta: "1", respuesta: "x" }, { id: "b", pregunta: "2", respuesta: "y" }, { id: "c", pregunta: "3", respuesta: "x" }], 10, azarFijo()), []);
+});
+prueba("Test", "repetir los fallos: misma respuesta buena aunque cambien de sitio", function () {
+  const qs = generarExamen(APUNTES, 10, azarFijo());
+  const otra = remezclarPreguntas(qs, azarFijo());
+  igual(otra.length, qs.length);
+  for (const q of otra) {
+    const original = qs.find(function (x) { return x.enunciado === q.enunciado; });
+    igual(q.opciones[q.correcta], original.opciones[original.correcta]);
+  }
+});
+prueba("Tarjetas de apuntes", "saca tarjetas de definiciones y frases", function () {
+  const apuntes = "El servidor es un equipo que ofrece servicios a otros equipos de la red.\n" +
+    "El cliente es un equipo que pide servicios a un servidor de la red.\n" +
+    "La Revolución Francesa comenzó en 1789 con la toma de la Bastilla.\n" +
+    "Napoleón fue derrotado definitivamente en la batalla de Waterloo en 1815.";
+  const ts = tarjetasDesdeApuntes(apuntes, 20, azarFijo());
+  cierto(ts.length >= 2, "salen " + ts.length);
+  cierto(ts.some(function (t) { return t.pregunta === "¿Qué es el servidor?"; }), JSON.stringify(ts));
+  cierto(ts.every(function (t) { return t.pregunta && t.respuesta; }));
+});
+prueba("Apuntes", "se guardan por asignatura y se conservan los de antes", function () {
+  estado.testApuntes = "apuntes viejos";
+  estado.testAsignatura = "Historia";
+  igual(apuntesDe("Historia"), "apuntes viejos");
+  guardarApuntes("Inglés", "vocabulario");
+  igual([apuntesDe("Inglés"), apuntesDe("Historia"), apuntesDe("Física")], ["vocabulario", "apuntes viejos", ""]);
+  guardarApuntes("Inglés", "");
+  igual(Object.keys(estado.apuntes), ["Historia"]);
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

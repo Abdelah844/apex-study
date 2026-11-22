@@ -49,7 +49,7 @@ function vistaTarjetasHTML() {
   const lista = mazos();
   const paraHoy = tarjetasParaHoy(null).length;
   let html = tarjetaApix(paraHoy ? "anima" : "estudia", "Apix",
-    !lista.length ? "Crea tarjetas con una pregunta y su respuesta. Yo te las pregunto y repites más las que te cuestan."
+    !lista.length ? "Crea tarjetas con una pregunta y su respuesta (o deja que las saque yo de tus apuntes). Yo te las pregunto y repites más las que te cuestan."
       : paraHoy ? "Hoy tienes " + paraHoy + (paraHoy === 1 ? " tarjeta" : " tarjetas") + " para repasar. ¡Son 5 minutos!"
       : "¡Todo repasado por hoy! Mañana te pregunto más.", "");
 
@@ -67,11 +67,13 @@ function vistaTarjetasHTML() {
       '<div class="bar"><i style="width:' + Math.round(dominadas / total.length * 100) + '%;background:' + colorAsig(a) + '"></i></div>' +
       '<div class="acciones">' +
         '<button class="btn auto" data-act="repasar" data-asig="' + esc(a) + '">' + (hoyA ? "Repasar" : "Repasar igualmente") + '</button>' +
-        '<button class="btn-sec" data-act="ver-tarjetas" data-asig="' + esc(a) + '">Ver tarjetas</button>' +
+        (total.length >= 4 ? '<button class="btn-sec" data-act="test-tarjetas" data-asig="' + esc(a) + '">📝 Test</button>' : '') +
+        '<button class="btn-sec" data-act="ver-tarjetas" data-asig="' + esc(a) + '">Ver</button>' +
         '<button class="btn-sec" data-act="nueva-tarjeta" data-asig="' + esc(a) + '">+ Tarjeta</button>' +
       '</div></div>';
   }
-  return html + '<div class="dos"><button class="btn' + (lista.length ? '-sec' : '') + '" data-act="nueva-tarjeta" data-asig="">+ Nueva tarjeta</button>' +
+  return html + '<button class="btn' + (lista.length ? '-sec full' : '') + '" data-act="tarjetas-apuntes-ir" data-asig="">✨ Crear tarjetas desde mis apuntes</button>' +
+    '<div class="dos"><button class="btn-sec" data-act="nueva-tarjeta" data-asig="">+ Nueva tarjeta</button>' +
     '<button class="btn-sec" data-act="pegar-tarjetas" data-asig="">📋 Pegar una lista</button></div>';
 }
 
@@ -92,6 +94,101 @@ function listaTarjetasHTML(asig) {
     }).join("") : '<p class="vacio">No quedan tarjetas.</p>') + '</div></div>' +
     '<p class="muted small" style="text-align:center">Los puntos ●●○○○ son la caja: cuantos más, mejor te la sabes.</p>';
 }
+
+// ---------- Modo escribir: comparar tu respuesta con la buena ----------
+// Quita mayúsculas, signos y artículos del principio ("el", "la", "the", "to"...)
+function normalizarRespuesta(t, sinTildes) {
+  let r = String(t || "").toLowerCase();
+  if (sinTildes) r = r.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  r = r.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  return r.replace(/^(el|la|los|las|un|una|unos|unas|the|a|an|to|le|les|der|die|das)\s+/, "");
+}
+
+// Cuántas letras hay que cambiar para pasar de una palabra a otra (distancia de Levenshtein)
+function letrasDistintas(a, b) {
+  const fila = [];
+  for (let j = 0; j <= b.length; j++) fila.push(j);
+  for (let i = 1; i <= a.length; i++) {
+    let anterior = fila[0];
+    fila[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const guardado = fila[j];
+      fila[j] = Math.min(fila[j] + 1, fila[j - 1] + 1, anterior + (a[i - 1] === b[j - 1] ? 0 : 1));
+      anterior = guardado;
+    }
+  }
+  return fila[b.length];
+}
+
+// "si": está bien · "casi": falla una tilde o una letra · "no": no es eso
+// · null: la respuesta es muy larga para comprobarla sola (la comparas tú)
+function compararRespuesta(escrita, correcta) {
+  if (!normalizarRespuesta(escrita, true)) return "no";
+  if (correcta.split(/\s+/).length > 6) return null;
+  // "car / coche" o "rojo, red": vale cualquiera de las opciones
+  const opciones = correcta.split(/\s*[\/,;]\s*|\s+o\s+|\s+or\s+/).concat([correcta]);
+  let mejor = "no";
+  for (const op of opciones) {
+    if (!op.trim()) continue;
+    if (normalizarRespuesta(escrita) === normalizarRespuesta(op)) return "si";
+    const a = normalizarRespuesta(escrita, true);
+    const b = normalizarRespuesta(op, true);
+    if (a === b) mejor = "casi";   // solo cambia una tilde
+    else if (b.length >= 4 && letrasDistintas(a, b) <= (b.length > 7 ? 2 : 1)) mejor = "casi";
+  }
+  return mejor;
+}
+
+// ---------- Tarjetas a partir de tus apuntes ----------
+let propuestaTarjetas = [];
+function hojaTarjetasDeApuntes(asignatura) {
+  const texto = apuntesDe(asignatura);   // generador.js
+  propuestaTarjetas = texto ? tarjetasDesdeApuntes(texto, 20) : [];
+  let cuerpo;
+  if (!texto) {
+    cuerpo = '<p class="vacio">No tienes apuntes guardados de esta asignatura.</p>' +
+      '<button class="btn" data-act="ir-test-asig" data-asig="' + esc(asignatura) + '">📎 Subir apuntes</button>';
+  } else if (!propuestaTarjetas.length) {
+    cuerpo = '<p class="vacio">Con estos apuntes no me salen tarjetas. Prueba con más texto (mejor en Word).</p>';
+  } else {
+    cuerpo = '<p class="muted small">Desmarca las que no te sirvan.</p><div class="list">' + propuestaTarjetas.map(function (t, i) {
+      return '<label class="item elegir-tarjeta"><input type="checkbox" data-i="' + i + '" checked>' +
+        '<div class="grow"><span class="name">' + esc(t.pregunta) + '</span><p class="muted small">' + esc(t.respuesta) + '</p></div></label>';
+    }).join("") + '</div>' +
+      '<button class="btn" data-act="crear-tarjetas-apuntes">Crear ' + propuestaTarjetas.length + ' tarjetas</button>';
+  }
+  abrirHoja('<div class="row between"><h2>Tarjetas de tus apuntes</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
+    '<label class="f">Asignatura' + selectorAsig("tdaAsig", asignatura || "") + '</label>' + cuerpo);
+}
+
+function crearTarjetasDeApuntes() {
+  const asignatura = leerAsig("tdaAsig") || "General";
+  let creadas = 0;
+  for (const caja of document.querySelectorAll(".elegir-tarjeta input")) {
+    if (!caja.checked) continue;
+    const t = propuestaTarjetas[Number(caja.dataset.i)];
+    const repetida = estado.tarjetas.some(function (x) { return x.asignatura === asignatura && x.pregunta === t.pregunta; });
+    if (repetida) continue;
+    estado.tarjetas.push({ id: nuevoId(), asignatura: asignatura, pregunta: t.pregunta, respuesta: t.respuesta, caja: 1, proxima: hoy() });
+    creadas++;
+  }
+  guardar();
+  cerrarHoja();
+  vistaEstudiar = "tarjetas";
+  asigVerTarjetas = null;
+  irA("estudiar");
+  toast("🃏 " + creadas + (creadas === 1 ? " tarjeta creada" : " tarjetas creadas"));
+}
+
+// Cuenta en directo cuántas tarjetas vas a crear y cambia de asignatura
+document.addEventListener("change", function (ev) {
+  if (ev.target.closest && ev.target.closest(".elegir-tarjeta")) {
+    const n = document.querySelectorAll(".elegir-tarjeta input:checked").length;
+    const boton = document.querySelector('[data-act="crear-tarjetas-apuntes"]');
+    if (boton) { boton.textContent = "Crear " + n + (n === 1 ? " tarjeta" : " tarjetas"); boton.disabled = !n; }
+  }
+  if (ev.target.id === "tdaAsig" && ev.target.value !== "otra") hojaTarjetasDeApuntes(ev.target.value);   // tda = tarjetas de apuntes
+});
 
 // ---------- Crear muchas tarjetas pegando una lista ----------
 // Una tarjeta por línea: "pregunta - respuesta" (también vale "=", ":", ";" o un tabulador)
@@ -236,33 +333,74 @@ function empezarRepaso(asignatura, todas) {
     cola: mezclar(cola).map(function (t) { return t.id; }),
     total: cola.length, hechas: 0, sabidas: 0, falladas: 0,
     fallidas: [],   // ids de las que has fallado alguna vez en este repaso
-    inicio: Date.now(), titulo: asignatura || "Todas las asignaturas"
+    inicio: Date.now(), titulo: asignatura || "Todas las asignaturas",
+    seguidas: 0, mejorSeguidas: 0   // aciertos seguidos (🔥)
   };
   $("tabs").hidden = true;
   $("foco").hidden = false;
   pintarRepaso(false);
 }
 
-function pintarRepaso(girada) {
+// girada: se ve la respuesta · comprobada: en modo escribir, { escrita, resultado }
+function pintarRepaso(girada, comprobada) {
   const t = estado.tarjetas.find(function (x) { return x.id === repaso.cola[0]; });
   const progreso = Math.round(repaso.hechas / repaso.total * 100);
+  const reves = !!estado.repasoReves;       // al revés: ves la respuesta y dices la pregunta
+  const escribir = !!estado.repasoEscribir; // escribir la respuesta en vez de pensarla
+  const delante = reves ? t.respuesta : t.pregunta;
+  const detras = reves ? t.pregunta : t.respuesta;
+
+  let abajo;
+  if (!girada && escribir) {
+    abajo = '<input id="rpEscribe" class="escribe-respuesta" placeholder="Escribe la respuesta" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<button class="btn" data-act="repaso-comprobar">Comprobar</button>' +
+      '<button class="btn-txt" data-act="girar-tarjeta">No me la sé, ver respuesta</button>';
+  } else if (!girada) {
+    abajo = '<button class="btn" data-act="girar-tarjeta">Ver respuesta</button>';
+  } else {
+    const sugerida = comprobada ? comprobada.resultado : null;
+    let veredicto = "";
+    if (comprobada) {
+      const textos = { si: "✅ ¡Correcto!", casi: "🤏 Casi: revisa alguna letra o tilde", no: "❌ No era eso" };
+      veredicto = '<div class="explicacion-test ' + (sugerida === "si" ? "bien" : sugerida === "no" ? "mal" : "") + '">' +
+        '<p class="small">Has escrito: <b>' + esc(comprobada.escrita || "—") + '</b></p>' +
+        '<p><b>' + (sugerida ? textos[sugerida] : "Compara tu respuesta con la buena") + '</b></p></div>';
+    }
+    const boton = function (r, clase, icono, texto) {
+      return '<button class="btn-sec ' + clase + (sugerida === r ? ' sugerida' : '') + '" data-act="respuesta-tarjeta" data-r="' + r + '">' + icono + '<br>' + texto + '</button>';
+    };
+    abajo = veredicto + '<p class="muted small">' + (sugerida ? "Confirma (o cámbialo si no estás de acuerdo):" : "¿Te la sabías?") + '</p>' +
+      '<div class="tres respuestas">' + boton("no", "mal", "❌", "No") + boton("casi", "regular", "🤔", "Más o menos") + boton("si", "bien", "✅", "Sí") + '</div>';
+  }
+
   $("foco").innerHTML = '<div class="in">' +
     '<div class="row between" style="width:100%"><button class="btn-txt" data-act="salir-repaso">✕ Salir</button>' +
+    (repaso.seguidas >= 2 ? '<span class="pill ok">🔥 ' + repaso.seguidas + ' seguidas</span>' : '') +
     '<span class="muted small num">' + Math.min(repaso.hechas + 1, repaso.total) + ' / ' + repaso.total + '</span></div>' +
     '<div class="bar" style="width:100%"><i style="width:' + progreso + '%"></i></div>' +
-    '<p class="label"><span class="punto-asig" style="background:' + colorAsig(t.asignatura) + '"></span> ' + esc(t.asignatura) + '</p>' +
-    '<button class="flashcard' + (girada ? ' girada' : '') + '" data-act="girar-tarjeta" aria-label="Dar la vuelta">' +
-      '<div class="cara delante"><p class="label">Pregunta</p><p class="texto">' + esc(t.pregunta) + '</p><p class="muted small">Toca para ver la respuesta</p></div>' +
-      '<div class="cara detras"><p class="label">Respuesta</p><p class="texto">' + esc(t.respuesta) + '</p></div>' +
-    '</button>' +
-    (girada
-      ? '<p class="muted small">¿Te la sabías?</p><div class="tres respuestas">' +
-          '<button class="btn-sec mal" data-act="respuesta-tarjeta" data-r="no">❌<br>No</button>' +
-          '<button class="btn-sec regular" data-act="respuesta-tarjeta" data-r="casi">🤔<br>Más o menos</button>' +
-          '<button class="btn-sec bien" data-act="respuesta-tarjeta" data-r="si">✅<br>Sí</button></div>'
-      : '<button class="btn" data-act="girar-tarjeta">Ver respuesta</button>') +
-    '</div>';
+    '<div class="row between" style="width:100%"><p class="label"><span class="punto-asig" style="background:' + colorAsig(t.asignatura) + '"></span> ' + esc(t.asignatura) + '</p>' +
+      '<span><button class="chip ' + (escribir ? "on" : "") + '" data-act="repaso-modo" data-m="escribir">✍️ Escribir</button> ' +
+      '<button class="chip ' + (reves ? "on" : "") + '" data-act="repaso-modo" data-m="reves">🔄 Al revés</button></span></div>' +
+    '<button class="flashcard' + (girada ? ' girada' : '') + '" data-act="girar-tarjeta" aria-label="Dar la vuelta"' + (escribir && !girada ? ' tabindex="-1"' : '') + '>' +
+      '<div class="cara delante"><p class="label">' + (reves ? "Respuesta" : "Pregunta") + '</p><p class="texto">' + esc(delante) + '</p>' +
+        (escribir ? '' : '<p class="muted small">Toca para ver la ' + (reves ? "pregunta" : "respuesta") + '</p>') + '</div>' +
+      '<div class="cara detras"><p class="label">' + (reves ? "Pregunta" : "Respuesta") + '</p><p class="texto">' + esc(detras) + '</p></div>' +
+    '</button>' + abajo + '</div>';
+  if (escribir && !girada) setTimeout(function () { if ($("rpEscribe")) $("rpEscribe").focus(); }, 60);
 }
+
+// Modo escribir: comprueba lo que has escrito
+function comprobarEscrito() {
+  const t = estado.tarjetas.find(function (x) { return x.id === repaso.cola[0]; });
+  const escrita = $("rpEscribe").value.trim();
+  const correcta = estado.repasoReves ? t.pregunta : t.respuesta;
+  pintarRepaso(true, { escrita: escrita, resultado: compararRespuesta(escrita, correcta) });
+}
+
+// Intro en la caja de escribir = Comprobar
+document.addEventListener("keydown", function (ev) {
+  if (ev.key === "Enter" && ev.target.id === "rpEscribe") comprobarEscrito();
+});
 
 // Cambia la caja y la próxima fecha de una tarjeta según la respuesta (sistema Leitner)
 //   "si": sube de caja · "casi": se queda y vuelve mañana · "no": vuelve a la caja 1 y sale hoy
@@ -286,6 +424,9 @@ function responderTarjeta(r) {
   aplicarRespuesta(t, r, hoy());
   contarRepaso();   // +1 XP (rangos.js)
 
+  // Racha de aciertos seguidos 🔥
+  repaso.seguidas = r === "si" ? repaso.seguidas + 1 : 0;
+  repaso.mejorSeguidas = Math.max(repaso.mejorSeguidas, repaso.seguidas);
   if (r === "si") {
     repaso.hechas++;
     if (!repaso.fallidas.includes(t.id)) repaso.sabidas++;   // solo cuenta si fue a la primera
@@ -321,6 +462,7 @@ function terminarRepaso() {
   mostrarCapa('<div class="msg">' + apixSVG("campeon", "xl") + '<p class="label">Repaso terminado</p><h1>¡Bien hecho!</h1>' +
     '<p>Te sabías <b>' + r.sabidas + ' de ' + unicas + '</b> a la primera' + (minutos >= 1 ? ' · ' + minutos + ' min' : '') + '.</p>' +
     '<p class="muted">' + (r.falladas ? "Las que fallaste te las volveré a preguntar pronto." : "¡Ni un fallo! Esas tardarán más en volver a salir.") + '</p>' +
+    (r.mejorSeguidas >= 3 ? '<p class="big-num">🔥 ' + r.mejorSeguidas + ' seguidas</p>' : '') +
     (subida ? '<p class="subida">' + subida + '</p>' : '') +
     '<button class="btn" data-act="cerrar-capa">¡Genial!</button></div>');
 }
@@ -330,6 +472,16 @@ const ACCIONES_TARJETAS = {
   "vista-estudiar": function (b) { vistaEstudiar = b.dataset.v; asigVerTarjetas = null; pintarEstudiar(); },
   "nueva-tarjeta": function (b) { hojaTarjeta(b.dataset.asig, null); },
   "pegar-tarjetas": function (b) { hojaListaTarjetas(b.dataset.asig); },
+  "repaso-modo": function (b) {
+    if (b.dataset.m === "escribir") estado.repasoEscribir = !estado.repasoEscribir;
+    else estado.repasoReves = !estado.repasoReves;
+    guardar();
+    pintarRepaso(false);
+  },
+  "repaso-comprobar": function () { comprobarEscrito(); },
+  "tarjetas-apuntes-ir": function () { hojaTarjetasDeApuntes(estado.testAsignatura || ""); },
+  "crear-tarjetas-apuntes": function () { crearTarjetasDeApuntes(); },
+  "ir-test-asig": function (b) { cerrarHoja(); estado.testAsignatura = b.dataset.asig; vistaEstudiar = "test"; irA("estudiar"); },
   "compartir-tarjetas": function (b) { compartirTarjetas(b.dataset.asig); },
   "guardar-lista-tarjetas": function () { guardarListaTarjetas(); },
   "editar-tarjeta": function (b) { hojaTarjeta(null, b.dataset.id); },
