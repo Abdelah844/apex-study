@@ -698,6 +698,46 @@ prueba("Tarjetas", "un guion dentro de una palabra no corta la tarjeta", functio
   igual(parsearListaTarjetas("Wi-Fi - red inalámbrica").tarjetas, [{ pregunta: "Wi-Fi", respuesta: "red inalámbrica" }]);
 });
 
+
+// ---------- NOVEDADES 3.8 ----------
+prueba("Rangos", "un test da 3 XP por punto de nota", function () {
+  estado.testsHechos = [{ fecha: "2026-11-10", nota: 8, bien: 8, preguntas: 10 }, { fecha: "2026-11-10", nota: 5.5, bien: 11, preguntas: 20 }];
+  igual(xpTotal(), 24 + 17);
+});
+prueba("Tarjetas", "compartir y volver a pegar da las mismas tarjetas", function () {
+  estado.tarjetas = [
+    { id: "a", asignatura: "Redes", pregunta: "¿Qué es DHCP?", respuesta: "Reparte IP", caja: 1, proxima: hoy() },
+    { id: "b", asignatura: "Redes", pregunta: "Wi-Fi - estándar", respuesta: "802.11 = inalámbrico", caja: 1, proxima: hoy() },
+    { id: "c", asignatura: "Redes", pregunta: "Puerto de HTTPS: cuál", respuesta: "443", caja: 1, proxima: hoy() },
+    { id: "d", asignatura: "Otra", pregunta: "No sale", respuesta: "x", caja: 1, proxima: hoy() }];
+  const texto = textoCompartirTarjetas("Redes");
+  cierto(texto.indexOf("📚 Tarjetas de Redes") === 0);
+  const r = parsearListaTarjetas(texto);
+  igual(r.malas, 0);
+  igual(r.tarjetas.map(function (t) { return t.respuesta; }), ["Reparte IP", "802.11=inalámbrico", "443"]);
+  igual(r.tarjetas[0].pregunta, "¿Qué es DHCP?");
+});
+prueba("Repaso exprés", "sale con un examen hoy o mañana, no pasado mañana", function () {
+  estado.examenes = [{ id: "e", asignatura: "Redes", fecha: sumarDias(hoy(), 2), hora: "" }];
+  igual(examenParaRepasoExpres(hoy()), null);
+  estado.examenes[0].fecha = sumarDias(hoy(), 1);
+  igual(examenParaRepasoExpres(hoy()).asignatura, "Redes");
+});
+prueba("Consejos", "enseña uno que no has usado, y el siguiente a los 2 días", function () {
+  estado.consejos = { vistos: [], ultimo: null, actual: null };
+  const primero = consejoDeHoy("2026-11-10");
+  igual(primero.id, "test");
+  igual(consejoDeHoy("2026-11-10").id, "test", "sigue saliendo hasta que lo cierras");
+  cerrarConsejo("2026-11-10");
+  igual(consejoDeHoy("2026-11-11"), null, "al día siguiente no");
+  igual(consejoDeHoy("2026-11-12").id, "rapido");
+});
+prueba("Consejos", "no enseña lo que ya usas", function () {
+  estado.consejos = { vistos: [], ultimo: null, actual: null };
+  estado.testsHechos = [{ fecha: hoy(), nota: 7, bien: 7, preguntas: 10 }];
+  igual(consejoDeHoy("2026-11-10").id, "rapido");
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

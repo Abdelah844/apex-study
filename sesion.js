@@ -57,7 +57,8 @@ function abrirFoco() {
     '<p class="muted small" id="focoSalidas"></p>' +
     '<p class="muted small" id="focoPantalla"></p>' +
     '<button class="btn-txt" id="focoNoSali" data-act="no-he-salido" hidden>No he salido, se apagó la pantalla</button>' +
-    botonesSonido() +
+    '<button class="btn-txt" data-act="ver-sonidos">🎵 Sonido de fondo' + (estado.sonido && estado.sonido !== "nada" ? ": " + SONIDOS[estado.sonido].nombre : "") + '</button>' +
+    '<div id="focoSonidos" hidden>' + botonesSonido() + '</div>' +
     '<button class="btn-sec" data-act="rendirse">Me rindo</button></div>';
   focoHumor = "";
   pedirPantallaEncendida();
@@ -106,11 +107,30 @@ function actualizarFoco() {
   }
 }
 
+// "▶ 25 min ya": empieza al momento con la asignatura de la última sesión
+function estudioRapido() {
+  const ultima = estado.sesiones.slice().reverse().find(function (x) { return !x.tipo; });
+  empezarSesion("Estudio libre", ultima ? ultima.asignatura : "", 25, null);
+  estado.sesionActual.rapida = true;
+  guardar();
+}
+
+// Guarda lo que has aprendido en la última sesión (y en las rápidas, lo usa como objetivo)
+function guardarAprendido() {
+  const texto = $("finAprendido").value.trim().slice(0, 200);
+  if (!texto) return;
+  const ultima = estado.sesiones[estado.sesiones.length - 1];
+  ultima.aprendido = texto;
+  if (ultima.objetivo === "Estudio libre") ultima.objetivo = texto.slice(0, 60);
+  guardar();
+  $("cajaAprendido").innerHTML = '<p class="small">✓ Apuntado en tu diario: «' + esc(texto) + '»</p>';
+}
+
 function terminarSesion() {
   clearInterval(relojFoco);
   const s = estado.sesionActual;
   const xpAntes = xpTotal();
-  estado.sesiones.push({ fecha: hoy(), hora: horaActual(), min: s.min, objetivo: s.objetivo, asignatura: s.asignatura, distracciones: s.distracciones });
+  estado.sesiones.push({ fecha: hoy(), hora: horaActual(), min: s.min, objetivo: s.objetivo, asignatura: s.asignatura, distracciones: s.distracciones, rapida: s.rapida || undefined });
 
   // El plan queda cumplido: el de esta sesión, o el primero pendiente de hoy
   let plan = estado.planes.find(function (p) { return p.id === s.planId; });
@@ -136,6 +156,10 @@ function terminarSesion() {
     '<p class="big-num">🔥 ' + rachaActual() + ' ' + (rachaActual() === 1 ? "día" : "días") + '</p>' +
     '<p><span class="pill ok">+' + xpGanada + ' XP</span>' + (xpGanada === 0 ? ' <span class="muted small">(ya llegaste al máximo de hoy)</span>' : '') + '</p>' +
     (subida ? '<p class="subida">' + subida + '</p>' : '') +
+    '<div id="cajaAprendido" class="stack tight" style="width:100%;text-align:left">' +
+      '<label class="f">¿Qué has aprendido? <span class="muted">(una frase, opcional)</span>' +
+      '<input id="finAprendido" maxlength="200" placeholder="Ej: cómo calcular la máscara de una subred"></label>' +
+      '<button class="btn-sec full" data-act="guardar-aprendido">Apuntar en mi diario</button></div>' +
     botonesDescanso(s) + '</div>');
 }
 
@@ -247,3 +271,8 @@ function noHeSalido() {
   toast("Vale, no cuenta como salida");
 }
 
+
+// Pulsar Intro en "¿Qué has aprendido?" también lo guarda
+document.addEventListener("keydown", function (ev) {
+  if (ev.key === "Enter" && ev.target.id === "finAprendido") guardarAprendido();
+});

@@ -79,7 +79,8 @@ function vistaTarjetasHTML() {
 function listaTarjetasHTML(asig) {
   const lista = (estado.tarjetas || []).filter(function (t) { return t.asignatura === asig; });
   return '<div class="row between"><button class="btn-txt" data-act="volver-tarjetas">‹ Volver</button>' +
-    '<span><button class="btn-txt" data-act="pegar-tarjetas" data-asig="' + esc(asig) + '">📋 Lista</button> ' +
+    '<span><button class="btn-txt" data-act="compartir-tarjetas" data-asig="' + esc(asig) + '">📤</button> ' +
+    '<button class="btn-txt" data-act="pegar-tarjetas" data-asig="' + esc(asig) + '">📋 Lista</button> ' +
     '<button class="btn-txt" data-act="nueva-tarjeta" data-asig="' + esc(asig) + '">+ Tarjeta</button></span></div>' +
     '<div class="card"><h2>' + esc(asig) + '</h2><div class="list">' +
     (lista.length ? lista.map(function (t) {
@@ -101,7 +102,7 @@ function parsearListaTarjetas(texto) {
   let malas = 0;
   for (const bruta of String(texto || "").split("\n")) {
     const linea = bruta.replace(/^\s*([-•*·]|\d+[.)])\s+/, "").trim();   // quita viñetas y números de lista
-    if (!linea) continue;
+    if (!linea || linea.indexOf("📚") === 0) continue;   // la línea de título de una lista compartida
     let partes = null;
     for (const sep of SEPARADORES_TARJETA) {
       const sitio = linea.indexOf(sep);
@@ -115,9 +116,38 @@ function parsearListaTarjetas(texto) {
   return { tarjetas: tarjetas, malas: malas };
 }
 
+// Texto para mandar las tarjetas a un compañero (se meten con "Pegar una lista")
+function textoCompartirTarjetas(asignatura) {
+  const lista = (estado.tarjetas || []).filter(function (t) { return t.asignatura === asignatura; });
+  const limpiar = function (t) { return String(t).replace(/[\t\n\r]+/g, " / ").replace(/ = /g, "=").trim(); };
+  const lineas = lista.map(function (t) {
+    // Si la pregunta lleva un guion con espacios, lo cambiamos para que no se corte por ahí
+    const pregunta = limpiar(t.pregunta).replace(/ [-–—] /g, " · ").replace(/: /g, ":\u00A0").replace(/;/g, ",");
+    return pregunta + " - " + limpiar(t.respuesta);
+  });
+  return "📚 Tarjetas de " + asignatura + " (Apix Study)\n" + lineas.join("\n");
+}
+
+async function compartirTarjetas(asignatura) {
+  const texto = textoCompartirTarjetas(asignatura);
+  estado.compartido = true;
+  guardar();
+  try {
+    if (navigator.share) { await navigator.share({ title: "Tarjetas de " + asignatura, text: texto }); return; }
+  } catch (e) {
+    if (e.name === "AbortError") return;   // has cerrado la ventana de compartir
+  }
+  try {
+    await navigator.clipboard.writeText(texto);
+    toast("📋 Copiadas. Pégalas en WhatsApp para tu compañero.");
+  } catch (e) {
+    toast("No he podido compartirlas en este móvil.");
+  }
+}
+
 function hojaListaTarjetas(asignatura) {
   abrirHoja('<div class="row between"><h2>Pegar una lista</h2><button class="btn-txt" data-act="cerrar-hoja">Cerrar</button></div>' +
-    '<p class="muted">Escribe o pega <b>una tarjeta por línea</b>: la pregunta, un guion y la respuesta.</p>' +
+    '<p class="muted">Escribe o pega <b>una tarjeta por línea</b>: la pregunta, un guion y la respuesta. Si un compañero te ha pasado sus tarjetas, pégalas aquí tal cual.</p>' +
     '<label class="f">Asignatura' + selectorAsig("tlAsig", asignatura || "") + '</label>' +
     '<label class="f">Tus tarjetas<textarea id="tlTexto" rows="9" placeholder="¿Qué es DHCP? - Un servicio que reparte direcciones IP\nPuerto de HTTPS - 443\nCapital de Francia = París"></textarea></label>' +
     '<p class="small" id="tlCuenta">Se crearán 0 tarjetas.</p>' +
@@ -196,8 +226,9 @@ function guardarTarjeta(id, otra) {
 }
 
 // ---------- Modo repaso (pantalla completa) ----------
-function empezarRepaso(asignatura) {
-  let cola = tarjetasParaHoy(asignatura || null);
+// todas = true: repasa todas las tarjetas de la asignatura (repaso de última hora antes del examen)
+function empezarRepaso(asignatura, todas) {
+  let cola = todas ? [] : tarjetasParaHoy(asignatura || null);
   // Si no toca ninguna, repasa todas las de esa asignatura igualmente
   if (!cola.length) cola = (estado.tarjetas || []).filter(function (t) { return !asignatura || t.asignatura === asignatura; });
   if (!cola.length) return;
@@ -299,6 +330,7 @@ const ACCIONES_TARJETAS = {
   "vista-estudiar": function (b) { vistaEstudiar = b.dataset.v; asigVerTarjetas = null; pintarEstudiar(); },
   "nueva-tarjeta": function (b) { hojaTarjeta(b.dataset.asig, null); },
   "pegar-tarjetas": function (b) { hojaListaTarjetas(b.dataset.asig); },
+  "compartir-tarjetas": function (b) { compartirTarjetas(b.dataset.asig); },
   "guardar-lista-tarjetas": function () { guardarListaTarjetas(); },
   "editar-tarjeta": function (b) { hojaTarjeta(null, b.dataset.id); },
   "guardar-tarjeta": function (b) { guardarTarjeta(b.dataset.id, b.dataset.otra); },

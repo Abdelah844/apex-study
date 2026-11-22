@@ -290,8 +290,100 @@ function tarjetaPorAsignatura() {
     '</div>';
 }
 
+// ---------- 5. REPASO DE ÚLTIMA HORA ----------
+// Si tienes un examen hoy o mañana, Apix te ofrece repasar todas las tarjetas de esa asignatura
+function examenParaRepasoExpres(fechaHoy) {
+  return proximosExamenes().find(function (e) { return diasEntre(fechaHoy, e.fecha) <= 1; }) || null;
+}
+
+function tarjetaRepasoExpres() {
+  const e = examenParaRepasoExpres(hoy());
+  if (!e) return "";
+  const cuando = e.fecha === hoy() ? "hoy" : "mañana";
+  const tarjetas = (estado.tarjetas || []).filter(function (t) { return t.asignatura === e.asignatura; }).length;
+  let boton = "";
+  if (tarjetas) boton = '<button class="btn auto" data-act="repaso-expres" data-asig="' + esc(e.asignatura) + '">⚡ Repasar ' + tarjetas + (tarjetas === 1 ? ' tarjeta' : ' tarjetas') + '</button>';
+  else if (estado.testApuntes) boton = '<button class="btn auto" data-act="ir-test">📝 Hacer un test</button>';
+  else boton = '<button class="btn auto" data-act="ir-test">📝 Subir apuntes y hacer un test</button>';
+  return '<div class="card stack tight expres"><p class="label">Repaso de última hora</p>' +
+    '<p>Tienes examen de <b>' + esc(e.asignatura) + '</b> ' + cuando + '. Un repaso rápido ahora marca la diferencia.</p>' +
+    '<div class="acciones">' + boton + '</div></div>';
+}
+
+// ---------- 6. CONSEJOS DE APIX ----------
+// Cada 2 días, Apix enseña una función que aún no has usado (hasta que pulses "Vale" o "Probar")
+const CONSEJOS = [
+  { id: "test", texto: "Sube tus apuntes (PDF, Word o fotos) y te hago un examen tipo test.", boton: "Probar", act: "ir-test",
+    usado: function () { return (estado.testsHechos || []).length > 0; } },
+  { id: "rapido", texto: "¿Sin ganas de pensar? Pulsa «▶ 25 min ya» y empiezas a estudiar al momento.", boton: "Empezar", act: "estudio-rapido",
+    usado: function () { return estado.sesiones.some(function (s) { return s.rapida; }); } },
+  { id: "lista", texto: "Puedes crear muchas tarjetas de golpe pegando una lista: pregunta, guion y respuesta.", boton: "Probar", act: "pegar-tarjetas",
+    usado: function () { return (estado.tarjetas || []).length >= 10; } },
+  { id: "horario", texto: "Apunta tus clases en Agenda → Horario y te diré cuándo te toca estudiar.", boton: "Ir al horario", act: "ir-horario",
+    usado: function () { return (estado.horario || []).length > 0; } },
+  { id: "compartir", texto: "Pasa tus tarjetas a un compañero con el botón 📤 de cada asignatura.", boton: "Ver tarjetas", act: "ir-tarjetas",
+    usado: function () { return !!estado.compartido || !(estado.tarjetas || []).length; } },
+  { id: "silencio", texto: "En Ajustes puedes poner horas de silencio para que no te avise de noche ni en clase.", boton: "Ajustes", act: "ajustes",
+    usado: function () { return false; } }
+];
+
+function consejoDeHoy(fechaHoy) {
+  const c = estado.consejos || (estado.consejos = { vistos: [], ultimo: null, actual: null });
+  const buscar = function (id) { return CONSEJOS.find(function (x) { return x.id === id; }); };
+  if (c.actual && !c.vistos.includes(c.actual)) {
+    const actual = buscar(c.actual);
+    if (actual && !actual.usado()) return actual;
+    c.actual = null;   // ya lo has usado por tu cuenta: no hace falta enseñarlo
+  }
+  if (c.ultimo && diasEntre(c.ultimo, fechaHoy) < 2) return null;
+  const siguiente = CONSEJOS.find(function (x) { return !c.vistos.includes(x.id) && !x.usado(); });
+  if (!siguiente) return null;
+  c.actual = siguiente.id;
+  c.ultimo = fechaHoy;
+  guardar();
+  return siguiente;
+}
+
+function tarjetaConsejo() {
+  if (!estado.sesiones.length) return "";   // el primer día ya hay bastante que ver
+  const c = consejoDeHoy(hoy());
+  if (!c) return "";
+  return '<div class="card stack tight consejo"><p>💡 <b>¿Sabías que…?</b> ' + esc(c.texto) + '</p>' +
+    '<div class="acciones"><button class="btn auto" data-act="consejo-probar">' + c.boton + '</button>' +
+    '<button class="btn-txt" data-act="consejo-vale">Vale</button></div></div>';
+}
+
+function cerrarConsejo(fechaHoy) {
+  const c = estado.consejos;
+  const id = c.actual;
+  if (id && !c.vistos.includes(id)) c.vistos.push(id);
+  c.actual = null;
+  c.ultimo = fechaHoy || hoy();
+  guardar();
+  return CONSEJOS.find(function (x) { return x.id === id; });
+}
+
+// ---------- 7. DIARIO DE ESTUDIO ----------
+function tarjetaDiario() {
+  const entradas = estado.sesiones.filter(function (s) { return s.aprendido; }).slice(-5).reverse();
+  if (!entradas.length) return "";
+  return '<div class="card"><h2>📓 Lo que has aprendido</h2><div class="list">' + entradas.map(function (s) {
+    return '<div class="item"><div class="grow"><span class="name">' + esc(s.aprendido) + '</span>' +
+      '<p class="muted small">' + fechaCorta(s.fecha) + (s.asignatura ? ' · ' + esc(s.asignatura) : '') + '</p></div></div>';
+  }).join("") + '</div></div>';
+}
+
 // ---------- Botones ----------
 const ACCIONES_PLANIFICADOR = {
+  "repaso-expres": function (b) { empezarRepaso(b.dataset.asig, true); },
+  "ir-test": function () { vistaEstudiar = "test"; irA("estudiar"); },
+  "ir-horario": function () { vistaAgenda = "horario"; irA("agenda"); },
+  "consejo-vale": function () { cerrarConsejo(); pintar(); },
+  "consejo-probar": function () {
+    const c = cerrarConsejo();
+    pintar();
+    if (c && ACCIONES[c.act]) ACCIONES[c.act]({ dataset: {} });
+  },
   "plan-examen-min": function (b) {
     planExamen.min = Number(b.dataset.min);
     abrirPlanExamen(planExamen.id);

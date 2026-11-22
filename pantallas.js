@@ -82,6 +82,7 @@ function pintarInicio() {
   let botonApix = "";
   if (apix.plan) botonApix = botonPlan(estado.planes.find(function (p) { return p.id === apix.plan; }), "Empezar ahora");
   if (apix.boton) botonApix = apix.boton;
+  botonApix += '<button class="btn-txt" data-act="que-estudio">🤔 ¿Qué estudio hoy?</button>';   // planificador.js
 
   // Semana actual (de lunes a domingo)
   const lunes = sumarDias(hoy(), -((new Date().getDay() + 6) % 7));
@@ -102,14 +103,16 @@ function pintarInicio() {
   $("app").innerHTML = '<div class="stack">' +
     cabecera(estado.nombre ? "Hola, " + esc(estado.nombre) : "Apix Study", fechaLarga(hoy())) +
     tarjetaApix(apix.humor, "Apix", apix.mensaje, botonApix) +
+    tarjetaRepasoExpres() +   // planificador.js
+    tarjetaConsejo() +        // planificador.js
     '<div class="card hero stack tight">' +
       '<div class="grid3">' +
         '<div><p class="label">Racha</p><p class="big-num num">🔥 ' + rachaActual() + '</p><p class="muted small">días</p></div>' +
         '<div><p class="label">Hoy</p><p class="big-num num">' + minutosDelDia(hoy()) + '</p><p class="muted small">minutos</p></div>' +
         '<div><p class="label">Exámenes</p><p class="big-num num">' + proximosExamenes().length + '</p><p class="muted small">por hacer</p></div>' +
       '</div>' +
-      '<button class="btn" data-act="ir" data-tab="estudiar" style="margin-top:10px">Empezar a estudiar</button>' +
-      '<button class="btn-sec full" data-act="que-estudio">🤔 ¿Qué estudio hoy?</button>' +
+      '<div class="dos" style="margin-top:10px"><button class="btn" data-act="ir" data-tab="estudiar">Estudiar</button>' +
+      '<button class="btn-sec" data-act="estudio-rapido">▶ 25 min ya</button></div>' +
     '</div>' +
     tarjetaHorarioHoy() +
     tarjetaDeberesInicio() +
@@ -299,6 +302,7 @@ function pintarProgreso() {
     '</div>' +
     '<div class="card stack"><h2>Últimos 7 días</h2><div class="grafica">' + barras + '</div></div>' +
     tarjetaPorAsignatura() +   // planificador.js
+    tarjetaDiario() +          // planificador.js
     '<div class="card"><h2>Últimas sesiones</h2><div class="list">' +
       (ultimas.length ? ultimas.map(function (s) {
         return '<div class="item"><div class="grow"><span class="name">' + esc(s.objetivo) + '</span><p class="muted small">' + fechaCorta(s.fecha) + ' · ' + s.hora + (s.asignatura ? ' · ' + esc(s.asignatura) : '') + '</p></div>' +

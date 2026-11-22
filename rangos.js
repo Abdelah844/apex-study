@@ -12,6 +12,7 @@ const XP = {
   plan: 20,         // cumplir un plan (cumplir tu palabra)
   sinSalir: 10,     // sesión sin salir de la app
   tarjeta: 1,       // cada tarjeta repasada
+  test: 3,          // por cada punto de nota en un test (un 8 → 24 XP)
   racha7: 50,       // bonus al llegar a 7 días seguidos
   racha30: 150,     // bonus al llegar a 30 días seguidos
   maxDia: 300       // como mucho se gana esto al día (sin contar los bonus)
@@ -46,6 +47,7 @@ function xpPorDia() {
     if (!s.distracciones) sumar(s.fecha, XP.sinSalir);
   }
   for (const p of estado.planes) if (p.hecho && esPlanEstudio(p)) sumar(p.fecha, XP.plan);   // "otra cosa" no da XP
+  for (const t of estado.testsHechos || []) sumar(t.fecha, Math.round(t.nota * XP.test));
   const repasos = estado.repasos || {};
   for (const fecha in repasos) sumar(fecha, repasos[fecha] * XP.tarjeta);
 
@@ -169,6 +171,7 @@ function abrirRangos() {
       '<p class="small">⏱️ <b>1 XP</b> por minuto de estudio</p>' +
       '<p class="small">🤝 <b>+20 XP</b> por cumplir un plan</p>' +
       '<p class="small">📵 <b>+10 XP</b> si no sales de la app en la sesión</p>' +
+      '<p class="small">📝 <b>+3 XP</b> por cada punto de nota en un test (un 8 → +24 XP)</p>' +
       '<p class="small">🃏 <b>+1 XP</b> por tarjeta repasada</p>' +
       '<p class="small">🔥 <b>+50 XP</b> al llegar a 7 días de racha y <b>+150 XP</b> a 30</p>' +
       '<p class="muted small">Como mucho se ganan 300 XP al día (sin contar los bonus). Cada rango tiene 3 divisiones: III, II y I.</p></div>' +

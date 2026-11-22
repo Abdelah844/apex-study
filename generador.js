@@ -519,7 +519,7 @@ function crearTest(mismoTexto) {
     $("tsErr").textContent = "Con estos apuntes no salen suficientes preguntas. Pega más texto, con frases completas.";
     return;
   }
-  test = { preguntas: preguntas, respuestas: [], actual: 0, asignatura: asignatura, texto: texto };
+  test = { preguntas: preguntas, respuestas: [], actual: 0, asignatura: asignatura, texto: texto, inicio: Date.now() };
   $("tabs").hidden = true;
   $("foco").hidden = false;
   if (preguntas.length < testCuantas) test.aviso = "Tus apuntes dan para " + preguntas.length + " preguntas. Con más texto saldrán más.";
@@ -556,8 +556,17 @@ function terminarTest() {
   const sinResponder = test.preguntas.length - test.respuestas.filter(function (r) { return r !== undefined; }).length;
   if (sinResponder && !confirm("Te quedan " + sinResponder + " sin responder (cuentan como fallo). ¿Corregir ya?")) return;
   const r = notaTest(test.preguntas, test.respuestas);
+  const xpAntes = xpTotal();
   estado.testsHechos = (estado.testsHechos || []).concat([{ fecha: hoy(), asignatura: test.asignatura, nota: r.nota, bien: r.bien, preguntas: test.preguntas.length }]).slice(-30);
+  // El tiempo del test cuenta como estudio (minutos, racha y asignaturas). Como mucho 90 min.
+  const minutos = Math.min(90, Math.round((Date.now() - test.inicio) / 60000));
+  if (minutos >= 1) {
+    estado.sesiones.push({ fecha: hoy(), hora: horaActual(), min: minutos, objetivo: "Test" + (test.asignatura ? " de " + test.asignatura : ""), asignatura: test.asignatura || "", distracciones: 0, tipo: "test" });
+    estado.mejorRacha = Math.max(estado.mejorRacha, rachaActual());
+  }
   guardar();
+  const xpGanada = xpTotal() - xpAntes;
+  const subida = comprobarSubida();
 
   const fallos = [];
   test.preguntas.forEach(function (p, i) { if (test.respuestas[i] !== p.correcta) fallos.push(i); });
@@ -585,6 +594,8 @@ function terminarTest() {
   $("foco").innerHTML = '<div class="in">' + apixSVG(humor, "lg") +
     '<p class="label">Tu nota</p><p class="nota-test">' + formatoNota(r.nota) + '<small> / 10</small></p>' +
     '<p>' + r.bien + ' de ' + test.preguntas.length + ' bien. ' + frase + '</p>' +
+    '<p><span class="pill ok">+' + xpGanada + ' XP</span>' + (minutos >= 1 ? ' <span class="muted small">· ' + minutos + ' min de estudio</span>' : '') + '</p>' +
+    (subida ? '<p class="subida">' + subida + '</p>' : '') +
     (fallos.length ? '<div style="width:100%;text-align:left"><p class="label">Conceptos que tienes que repasar</p><div class="chips">' + repasar + '</div></div>' +
       '<button class="btn-sec full" data-act="test-a-tarjetas">🃏 Pasar los fallos a tarjetas de repaso</button>' + lista : '') +
     '<button class="btn" data-act="test-otra-vez">🔄 Otro test con los mismos apuntes</button>' +

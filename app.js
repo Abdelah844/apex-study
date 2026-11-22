@@ -39,6 +39,9 @@ const ACCIONES = {
     b.classList.toggle("on", !no);
   },
   "no-he-salido": function () { noHeSalido(); },
+  "estudio-rapido": function () { estudioRapido(); },
+  "guardar-aprendido": function () { guardarAprendido(); },
+  "ver-sonidos": function () { $("focoSonidos").hidden = !$("focoSonidos").hidden; },
   "cambiar-aviso": function (b) {
     const clave = b.dataset.clave;
     const cambio = {};
