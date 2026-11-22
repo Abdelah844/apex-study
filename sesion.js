@@ -3,6 +3,25 @@
 // Pantalla de concentración, fin de la sesión y descansos Pomodoro.
 // =====================================================
 
+// ---------- PANTALLA ENCENDIDA ----------
+// Mientras estudias, pedimos al móvil que no apague la pantalla solo (Wake Lock).
+// Si se apagara sola, el móvil avisaría a la app igual que si salieras a otra app,
+// y Apix pensaría que te has ido.
+let bloqueoPantalla = null;
+async function pedirPantallaEncendida() {
+  if (!("wakeLock" in navigator) || bloqueoPantalla) return;
+  try {
+    bloqueoPantalla = await navigator.wakeLock.request("screen");
+    bloqueoPantalla.addEventListener("release", function () { bloqueoPantalla = null; });
+  } catch (e) {
+    bloqueoPantalla = null;   // el móvil no lo deja (por ejemplo, con ahorro de batería)
+  }
+}
+function soltarPantalla() {
+  if (bloqueoPantalla) bloqueoPantalla.release();
+  bloqueoPantalla = null;
+}
+
 // ---------- 6. SESIÓN DE ESTUDIO ----------
 function empezarSesion(objetivo, asignatura, minutos, planId) {
   estado.sesionActual = {
@@ -24,9 +43,11 @@ function abrirFoco() {
     '<div class="bocadillo"><p id="focoFrase"></p></div>' +
     '<div class="anillo"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="fondo"/><circle cx="50" cy="50" r="44" class="avance" id="focoAnillo" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><span class="t num" id="focoReloj">--:--</span></div>' +
     '<p class="muted small" id="focoSalidas"></p>' +
+    '<button class="btn-txt" id="focoNoSali" data-act="no-he-salido" hidden>No he salido, se apagó la pantalla</button>' +
     botonesSonido() +
     '<button class="btn-sec" data-act="rendirse">Me rindo</button></div>';
   focoHumor = "";
+  pedirPantallaEncendida();
   sonar(estado.sonido || "nada");
   actualizarFoco();
   clearInterval(relojFoco);
@@ -172,6 +193,7 @@ function terminarDescanso(porTiempo) {
 
 function cerrarFoco() {
   pararSonido();
+  soltarPantalla();
   $("foco").hidden = true;
   $("foco").innerHTML = "";
   $("tabs").hidden = false;
@@ -188,7 +210,27 @@ document.addEventListener("visibilitychange", function () {
     mostrarAviso("Apix 😠", "¡Vuelve a estudiar! Te quedan " + quedan + " min de «" + estado.sesionActual.objetivo + "».");
   } else {
     enfadoHasta = Date.now() + 4000;   // 4 segundos enfadado
+    pedirPantallaEncendida();          // al salir, el móvil la suelta: la volvemos a pedir
     actualizarFoco();
+    // Durante 15 segundos puedes decir que no saliste (la pantalla se apagó sola)
+    const boton = $("focoNoSali");
+    if (boton) {
+      boton.hidden = false;
+      clearTimeout(boton.temporizador);
+      boton.temporizador = setTimeout(function () { boton.hidden = true; }, 15000);
+    }
   }
 });
+
+// "No he salido": quitamos esa salida y Apix deja de estar enfadado
+function noHeSalido() {
+  const s = estado.sesionActual;
+  if (!s) return;
+  if (s.distracciones > 0) s.distracciones--;
+  guardar();
+  enfadoHasta = 0;
+  $("focoNoSali").hidden = true;
+  actualizarFoco();
+  toast("Vale, no cuenta como salida");
+}
 

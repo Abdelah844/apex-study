@@ -38,6 +38,7 @@ const ACCIONES = {
     guardar();
     b.classList.toggle("on", !no);
   },
+  "no-he-salido": function () { noHeSalido(); },
   "cambiar-aviso": function (b) {
     const clave = b.dataset.clave;
     const cambio = {};
