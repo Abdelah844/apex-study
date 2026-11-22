@@ -81,6 +81,7 @@ function tarjetaRecordatorios() {
     interruptor("tresDias", "Avisar 3 días antes del examen") +
     interruptor("semana", "Avisar 1 semana antes del examen") +
     interruptor("resumen", "Resumen de tu semana (domingos a las 20:00)") +
+    interruptor("rachaAviso", "Avisarme si mi racha está en peligro (20:00)") +
     '<h3 style="margin-top:10px">Horas de silencio</h3>' +
     interruptor("silencio", "No avisar de noche") +
     '<div class="dos"><label class="f">Desde<input id="avSilDesde" type="time" data-cambio="hora-silencio" value="' + c.silDesde + '"></label>' +
@@ -111,7 +112,7 @@ document.addEventListener("change", function (ev) {
 });
 
 // Número de versión (súbelo junto con VERSION en sw.js)
-const VERSION_APP = "3.9.1";
+const VERSION_APP = "4.0.0";
 
 // ---------- MODO CLARO / OSCURO ----------
 // "auto" sigue al móvil; "claro" u "oscuro" lo fuerza. Se guarda aparte de los datos.
@@ -168,6 +169,7 @@ function hojaAjustes() {
         }).join("") +
       '</div><p class="muted small">Automático usa el mismo modo que tu móvil.</p></div>' +
     tarjetaRecordatorios() +
+    tarjetaFechasCurso() +   // curso.js
     '<div class="card stack tight"><h3>Avisos</h3><p class="muted small">Apix te avisará cuando llegue la hora de empezar a estudiar.</p>' + avisos + '</div>' +
     // Cómo instalarla: solo sale si aún la usas desde el navegador
     (appInstalada() ? '' : '<div class="card stack tight"><h3>Instalar en el móvil</h3>' + pasosInstalar() + '</div>') +

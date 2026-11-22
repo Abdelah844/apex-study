@@ -103,6 +103,7 @@ function pintarInicio() {
   $("app").innerHTML = '<div class="stack">' +
     cabecera(estado.nombre ? "Hola, " + esc(estado.nombre) : "Apix Study", fechaLarga(hoy())) +
     tarjetaApix(apix.humor, "Apix", apix.mensaje, botonApix) +
+    tarjetaAvisoEvaluacion() +   // curso.js
     tarjetaRepasoExpres() +   // planificador.js
     tarjetaConsejo() +        // planificador.js
     '<div class="card hero stack tight">' +
@@ -111,6 +112,7 @@ function pintarInicio() {
         '<div><p class="label">Hoy</p><p class="big-num num">' + minutosDelDia(hoy()) + '</p><p class="muted small">minutos</p></div>' +
         '<div><p class="label">Exámenes</p><p class="big-num num">' + proximosExamenes().length + '</p><p class="muted small">por hacer</p></div>' +
       '</div>' +
+      tarjetaCuentaAtras() +   // curso.js
       '<div class="dos" style="margin-top:10px"><button class="btn" data-act="ir" data-tab="estudiar">Estudiar</button>' +
       '<button class="btn-sec" data-act="estudio-rapido">▶ 25 min ya</button></div>' +
     '</div>' +
@@ -303,6 +305,7 @@ function pintarProgreso() {
     '<div class="card stack"><h2>Últimos 7 días</h2><div class="grafica">' + barras + '</div></div>' +
     tarjetaPorAsignatura() +   // planificador.js
     tarjetaDiario() +          // planificador.js
+    tarjetaResumenes() +       // curso.js
     '<div class="card"><h2>Últimas sesiones</h2><div class="list">' +
       (ultimas.length ? ultimas.map(function (s) {
         return '<div class="item"><div class="grow"><span class="name">' + esc(s.objetivo) + '</span><p class="muted small">' + fechaCorta(s.fecha) + ' · ' + s.hora + (s.asignatura ? ' · ' + esc(s.asignatura) : '') + '</p></div>' +

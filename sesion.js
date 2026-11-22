@@ -142,6 +142,7 @@ function terminarSesion() {
   estado.mejorRacha = Math.max(estado.mejorRacha, rachaActual());
   guardar();
   programarResumenSemana();   // el resumen del domingo, con los minutos de hoy
+  programarAvisoRacha();      // hoy ya has estudiado: preparamos el aviso de mañana
   cerrarFoco();
   confeti();
   vibrar([120, 60, 120]);

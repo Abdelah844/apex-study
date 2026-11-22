@@ -189,7 +189,7 @@ const ACCIONES = {
 };
 
 // Añadimos los botones del horario semanal (están en horario.js)
-Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS, ACCIONES_TARJETAS, ACCIONES_SONIDOS, ACCIONES_BIENVENIDA, ACCIONES_PLANIFICADOR, ACCIONES_RANGOS, ACCIONES_GENERADOR, ACCIONES_LECTOR);
+Object.assign(ACCIONES, ACCIONES_HORARIO, ACCIONES_DEBERES, ACCIONES_NOTAS, ACCIONES_TARJETAS, ACCIONES_SONIDOS, ACCIONES_BIENVENIDA, ACCIONES_PLANIFICADOR, ACCIONES_RANGOS, ACCIONES_GENERADOR, ACCIONES_LECTOR, ACCIONES_CURSO);
 
 // Un solo "escuchador" para todos los clics de la app
 document.addEventListener("click", function (ev) {
@@ -216,6 +216,7 @@ else setTimeout(recordarCopia, 2500);                  // una vez al mes: "¿hac
 if (localStorage.getItem("apex-study-resumen") !== hoy()) {
   localStorage.setItem("apex-study-resumen", hoy());
   setTimeout(programarResumenSemana, 5000);
+  setTimeout(programarAvisoRacha, 6000);
 }
 
 comprobarPlanes();

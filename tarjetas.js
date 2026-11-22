@@ -474,6 +474,7 @@ function terminarRepaso() {
     estado.sesiones.push({ fecha: hoy(), hora: horaActual(), min: minutos, objetivo: "Repaso de tarjetas", asignatura: repaso.titulo === "Todas las asignaturas" ? "" : repaso.titulo, distracciones: 0 });
     estado.mejorRacha = Math.max(estado.mejorRacha, rachaActual());
     guardar();
+    programarAvisoRacha();   // curso.js
   }
   const r = repaso;
   repaso = null;

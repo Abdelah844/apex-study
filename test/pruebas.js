@@ -804,6 +804,53 @@ prueba("Apuntes", "se guardan por asignatura y se conservan los de antes", funct
   igual(Object.keys(estado.apuntes), ["Historia"]);
 });
 
+// ---------- Curso: fechas, evaluaciones y resúmenes ----------
+prueba("Curso", "las fechas por defecto dependen del curso (septiembre a junio)", function () {
+  const nov = fechasCurso("2026-11-22");
+  igual([nov.curso, nov.fin1, nov.fin2, nov.pau], [2026, "2026-12-22", "2027-03-19", "2027-06-01"]);
+  igual(fechasCurso("2027-02-10").curso, 2026);
+  igual(fechasCurso("2027-09-15").curso, 2027);
+});
+prueba("Curso", "se usan las fechas propias solo si son de este curso", function () {
+  estado.fechasCurso = { curso: 2026, fin1: "2026-12-19" };
+  igual(fechasCurso("2026-11-22").fin1, "2026-12-19");
+  igual(fechasCurso("2027-10-01").fin1, "2027-12-22");
+});
+prueba("Curso", "sabe en qué evaluación estamos", function () {
+  igual(evaluacionActual("2026-11-22").numero, 1);
+  igual(evaluacionActual("2026-12-23").numero, 2);
+  igual(evaluacionActual("2027-04-01").numero, 3);
+  igual(evaluacionActual("2027-07-15"), null);
+});
+prueba("Curso", "el aviso de racha avisa del protector", function () {
+  cierto(textoAvisoRacha(5, true).includes("5 días"));
+  cierto(textoAvisoRacha(5, true).includes("protector"));
+  cierto(!textoAvisoRacha(1, false).includes("protector"));
+  cierto(textoAvisoRacha(1, false).includes("1 día "));
+});
+prueba("Curso", "mejor racha y resumen de un periodo", function () {
+  estado.sesiones = [
+    { fecha: "2026-10-01", min: 30, asignatura: "Historia" },
+    { fecha: "2026-10-02", min: 20, asignatura: "Inglés" },
+    { fecha: "2026-10-03", min: 40, asignatura: "Historia" },
+    { fecha: "2026-10-05", min: 10, asignatura: "Inglés" },
+    { fecha: "2026-12-30", min: 99, asignatura: "Física" }
+  ];
+  estado.testsHechos = [{ fecha: "2026-10-02", nota: 7.5 }, { fecha: "2026-10-04", nota: 9 }];
+  estado.repasos = { "2026-10-03": 12, "2027-01-01": 5 };
+  const r = resumenPeriodo("2026-09-08", "2026-12-22");
+  igual([r.minutos, r.dias, r.asignaturaTop, r.minutosTop, r.mejorRacha, r.tests, r.mejorNota, r.tarjetas],
+    [100, 4, "Historia", 70, 3, 2, 9, 12]);
+});
+prueba("Curso", "solo avisa del resumen cerca del fin y si no lo has visto", function () {
+  estado.sesiones = [{ fecha: "2026-10-01", min: 30, asignatura: "Historia" }];
+  igual(evaluacionParaAvisar("2026-11-22"), null);
+  igual(evaluacionParaAvisar("2026-12-20").numero, 1);
+  igual(evaluacionParaAvisar("2027-01-03").numero, 1);
+  estado.resumenesVistos = ["2026-1"];
+  igual(evaluacionParaAvisar("2026-12-20"), null);
+});
+
 // ---------- Ejecutar todas ----------
 function ejecutarPruebas() {
   const guardado = estado;

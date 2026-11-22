@@ -213,7 +213,7 @@ function fueraDeSilencio(cuando, c, horario) {
 
 // Guarda en Supabase un aviso cualquiera: clave única, cuándo, título y texto
 async function avisoNube(clave, cuando, titulo, cuerpo) {
-  if (/^(ex-|deb-|resumen-)/.test(clave)) cuando = fueraDeSilencio(cuando, configAvisos(), estado.horario);
+  if (/^(ex-|deb-|resumen-|racha-)/.test(clave)) cuando = fueraDeSilencio(cuando, configAvisos(), estado.horario);
   if (cuando <= new Date()) return;   // esa hora ya pasó
   try {
     const sub = await suscripcionPush();
@@ -287,7 +287,8 @@ function programarTodosNube() {
 function configAvisos() {
   return Object.assign({
     tarde: "18:00", manana: "07:30", semana: false, tresDias: true, resumen: true,
-    silencio: true, silDesde: "23:00", silHasta: "07:00", silencioClases: false   // horas de silencio
+    silencio: true, silDesde: "23:00", silHasta: "07:00", silencioClases: false,   // horas de silencio
+    rachaAviso: true   // aviso a las 20:00 si tu racha está en peligro
   }, estado.avisosConfig || {});
 }
 

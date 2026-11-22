@@ -695,7 +695,7 @@ function terminarTest() {
   if (sinResponder && !confirm("Te quedan " + sinResponder + " sin responder (cuentan como fallo). ¿Corregir ya?")) return;
   const r = notaTest(test.preguntas, test.respuestas);
   const xpAntes = xpTotal();
-  estado.testsHechos = (estado.testsHechos || []).concat([{ fecha: hoy(), asignatura: test.asignatura, nota: r.nota, bien: r.bien, preguntas: test.preguntas.length }]).slice(-30);
+  estado.testsHechos = (estado.testsHechos || []).concat([{ fecha: hoy(), asignatura: test.asignatura, nota: r.nota, bien: r.bien, preguntas: test.preguntas.length }]).slice(-200);
   // El tiempo del test cuenta como estudio (minutos, racha y asignaturas). Como mucho 90 min.
   const minutos = Math.min(90, Math.round((Date.now() - test.inicio) / 60000));
   if (minutos >= 1) {
@@ -710,6 +710,7 @@ function terminarTest() {
     });
   }
   guardar();
+  if (minutos >= 1) programarAvisoRacha();   // curso.js
   const xpGanada = xpTotal() - xpAntes;
   const subida = comprobarSubida();
 
