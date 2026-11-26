@@ -59,6 +59,8 @@ function abrirFoco() {
     '<button class="btn-txt" id="focoNoSali" data-act="no-he-salido" hidden>No he salido, se apagó la pantalla</button>' +
     '<button class="btn-txt" data-act="ver-sonidos">🎵 Sonido de fondo' + (estado.sonido && estado.sonido !== "nada" ? ": " + SONIDOS[estado.sonido].nombre : "") + '</button>' +
     '<div id="focoSonidos" hidden>' + botonesSonido() + '</div>' +
+    '<button class="btn" id="focoSeguir" data-act="seguir-estudiando" hidden>▶ Seguir estudiando</button>' +
+    '<button class="btn-txt" id="focoPausar" data-act="pausar"></button>' +
     '<button class="btn-sec" data-act="rendirse">Me rindo</button></div>';
   focoHumor = "";
   pedirPantallaEncendida();
@@ -79,6 +81,8 @@ function ponerApixFoco(humor, frase) {
 function actualizarFoco() {
   const s = estado.sesionActual;
   if (!s) return;
+  if (s.pausa) { actualizarPausa(); return; }
+  pintarBotonPausa();
   const total = s.min * 60;
   const restantes = Math.max(0, Math.round((s.fin - Date.now()) / 1000));
   const pasados = total - restantes;
@@ -105,6 +109,65 @@ function actualizarFoco() {
     const indice = Math.floor(pasados / 300);     // cambia cada 5 minutos
     ponerApixFoco("estudia", FRASES_ESTUDIO[indice % FRASES_ESTUDIO.length]);
   }
+}
+
+// ---------- PAUSA ----------
+// 5 minutos de pausa por cada 25 de estudio (en una sesión de 25 min: 5; de 50: 10).
+// Mientras dura, el reloj se para y salir de la app no cuenta como distracción.
+function pausaPermitida(s) { return Math.ceil(s.min / 25) * 5 * 60000; }      // en milisegundos
+function pausaQueQueda(s) { return Math.max(0, pausaPermitida(s) - (s.pausaUsada || 0)); }
+
+function pintarBotonPausa() {
+  const s = estado.sesionActual;
+  const boton = $("focoPausar");
+  if (!s || !boton) return;
+  const quedan = Math.floor(pausaQueQueda(s) / 60000);
+  boton.hidden = quedan < 1 || !!s.pausa;
+  boton.textContent = "⏸ Pausa (te quedan " + quedan + " min)";
+  $("focoSeguir").hidden = !s.pausa;
+}
+
+function pausar() {
+  const s = estado.sesionActual;
+  if (!s || s.pausa || pausaQueQueda(s) < 60000) return;
+  s.pausa = { inicio: Date.now(), fin: Date.now() + pausaQueQueda(s) };
+  guardar();
+  // Si cierras la app, Apix te avisa desde la nube cuando se acabe la pausa
+  avisoNube("pausa", new Date(s.pausa.fin), "Apix ⏸", "Se acabó la pausa. ¡Vuelve a «" + s.objetivo + "»!");
+  actualizarFoco();
+}
+
+// Sigue el estudio. El reloj se mueve hacia delante lo que has estado en pausa,
+// así esos minutos no cuentan para la XP ni para la racha.
+// porTiempo = true si la pausa se ha acabado sola
+function seguirEstudiando(porTiempo) {
+  const s = estado.sesionActual;
+  if (!s || !s.pausa) return;
+  // Si vuelves más de 10 segundos tarde, cuenta como una salida
+  const tarde = Date.now() - s.pausa.fin > 10000;
+  const ahora = Math.min(Date.now(), s.pausa.fin);
+  const duracion = ahora - s.pausa.inicio;
+  s.fin += duracion;
+  s.pausaUsada = (s.pausaUsada || 0) + duracion;
+  s.pausa = null;
+  if (tarde) { s.distracciones++; enfadoHasta = Date.now() + 4000; }
+  guardar();
+  if (porTiempo) {
+    vibrar([200, 100, 200]);
+    mostrarAviso("Apix ⏸", "Se acabó la pausa. ¡Vuelve a «" + s.objetivo + "»!", "pausa");
+  } else {
+    cancelarAvisoNube("pausa");
+  }
+  actualizarFoco();
+}
+
+function actualizarPausa() {
+  const s = estado.sesionActual;
+  const restantes = Math.max(0, Math.round((s.pausa.fin - Date.now()) / 1000));
+  if (restantes <= 0) { seguirEstudiando(true); return; }
+  pintarBotonPausa();
+  $("focoReloj").textContent = String(Math.floor(restantes / 60)).padStart(2, "0") + ":" + String(restantes % 60).padStart(2, "0");
+  ponerApixFoco("descanso", restantes <= 30 ? "¡Se acaba la pausa! Prepárate para volver." : "En pausa ⏸ El reloj está parado. Vuelve antes de que se acabe la cuenta atrás.");
 }
 
 // "▶ 25 min ya": empieza al momento con la asignatura de la última sesión
@@ -241,6 +304,10 @@ function cerrarFoco() {
 // Si sales de la app mientras estudias, Apix lo nota
 document.addEventListener("visibilitychange", function () {
   if (!estado.sesionActual) return;
+  if (estado.sesionActual.pausa) {   // en pausa puedes salir sin que cuente
+    if (!document.hidden) actualizarFoco();
+    return;
+  }
   if (document.hidden) {
     estado.sesionActual.distracciones++;
     guardar();

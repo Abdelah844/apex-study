@@ -39,6 +39,8 @@ const ACCIONES = {
     b.classList.toggle("on", !no);
   },
   "no-he-salido": function () { noHeSalido(); },
+  "pausar": function () { pausar(); },
+  "seguir-estudiando": function () { seguirEstudiando(false); },
   "estudio-rapido": function () { estudioRapido(); },
   "guardar-aprendido": function () { guardarAprendido(); },
   "ver-sonidos": function () { $("focoSonidos").hidden = !$("focoSonidos").hidden; },
@@ -103,6 +105,7 @@ const ACCIONES = {
   "rendirse": function () {
     if (!confirm("¿Seguro que quieres dejarlo? No contará para tu racha.")) return;
     clearInterval(relojFoco);
+    if (estado.sesionActual.pausa) cancelarAvisoNube("pausa");
     estado.sesionActual = null;
     guardar();
     cerrarFoco();
